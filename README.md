@@ -1,56 +1,113 @@
-# Welcome to your Expo app 👋
+# Noxarianet Store — Android App
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Aplikasi Android resmi Noxarianet Store. Dibangun dengan Expo + React Native +
+TypeScript, memakai Expo Router dan React Native Paper (Material 3, light theme).
 
-## Get started
+## Cakupan v1
 
-1. Install dependencies
+- Login, daftar akun, verifikasi email, dan lupa password.
+- Beranda, katalog prepaid, pencarian, dan filter kategori.
+- Detail produk multi-server, validasi ID akun, checkout saldo atau QRIS.
+- Halaman pembayaran QRIS dengan countdown dan polling status otomatis.
+- Katalog tagihan (postpaid), cek tagihan, dan pembayaran tagihan dengan saldo.
+- Riwayat pesanan, detail pesanan, dan pembatalan pesanan `PENDING`.
+- Saldo, top up QRIS, dan riwayat mutasi saldo.
+- Edit profil, ubah password, dan bantuan via WhatsApp.
 
-   ```bash
-   npm install
-   ```
+Belum termasuk: tiket in-app, push notification, mode tamu, panel admin, dan
+kebutuhan Play Store.
 
-2. Start the app
+## Alur tagihan (postpaid)
 
-   ```bash
-   npx expo start
-   ```
+Produk tagihan tidak punya nominal tetap. Urutannya:
 
-In the output, you'll find options to open the app in a
+1. Katalog → tab **Tagihan** → pilih produk (mis. PLN, PDAM, BPJS).
+2. Detail produk → pilih jenis tagihan (biller) → **Cek tagihan**.
+3. Masukkan nomor pelanggan / ID meter → server melakukan inquiry ke vendor
+   dan membuat quote sementara berumur 10 menit.
+4. Bayar quote memakai saldo Noxarianet. Nominal tidak bisa diubah manual.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Butuh dua endpoint: `POST /mobile/bills/inquiry` (quote) dan
+`POST /mobile/orders` dengan `{ "type": "bill", "inquiry_id": ... }`.
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Menjalankan
 
-## Get a fresh project
-
-When you're ready, run:
+Prasyarat: Node.js 20+ dan npm.
 
 ```bash
-npm run reset-project
+npm install
+cp .env.example .env   # PowerShell: Copy-Item .env.example .env
+npm start
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+Perintah lain:
 
-### Other setup steps
+```bash
+npm run android     # buka di emulator/device Android
+npm run lint        # ESLint (expo lint)
+npm run typecheck   # tsc --noEmit
+npx expo-doctor     # cek konfigurasi & dependency
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Environment
 
-## Learn more
+`EXPO_PUBLIC_API_BASE_URL` wajib berisi base URL API **termasuk** `/api`.
+Contoh staging:
 
-To learn more about developing your project with Expo, look at the following resources:
+```dotenv
+EXPO_PUBLIC_API_BASE_URL=https://staging.noxarianet.web.id/api
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Opsional:
 
-## Join the community
+```dotenv
+EXPO_PUBLIC_UPDATE_URL=https://example.com/download
+EXPO_PUBLIC_SUPPORT_URL=https://wa.me/628xxxxxxxxxx
+```
 
-Join our community of developers creating universal apps.
+`EXPO_PUBLIC_UPDATE_URL` dipakai tombol di layar force-update.
+`EXPO_PUBLIC_SUPPORT_URL` hanya fallback jika backend belum mengisi
+`whatsapp_cs`.
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+## Build APK internal (EAS)
+
+Profil `preview` menghasilkan APK internal dengan API staging. Profil
+`production` menghasilkan AAB dengan API production.
+
+```bash
+npx eas-cli@latest login
+npx eas-cli@latest build -p android --profile preview
+```
+
+Build pertama akan meminta pembuatan keystore Android. Simpan kredensial
+tersebut; keystore yang hilang tidak bisa dipulihkan.
+
+> Sebelum build production, ganti `EXPO_PUBLIC_API_BASE_URL` di profil
+> `production` (`eas.json`) dengan domain API final. Nilai saat ini adalah
+> placeholder.
+
+## Struktur
+
+```
+src/
+  app/          route Expo Router (auth, tabs, checkout, pembayaran, topup, ...)
+  api/          fetch wrapper + kontrak mobile API
+  auth/         AuthProvider, session restore, logout global 401
+  components/   UI atomik (ui/, product/, order/, wallet/, system/)
+  hooks/        query hooks dan timer
+  lib/          format, validasi, storage, idempotency, helper produk
+  query/        konfigurasi TanStack Query
+  theme/        token DESIGN.md + theme Paper MD3
+```
+
+Kontrak API: `../docs/mobile-api.md`. Token web tidak bisa dipakai; login app
+memakai `/mobile/auth/login` agar token memiliki claim `client: android`.
+
+## Catatan
+
+- Tidak ada akses langsung ke Supabase dari aplikasi.
+- Token disimpan di `expo-secure-store`; data non-sensitif di AsyncStorage.
+- QR yang ditampilkan adalah gambar dari `qr_link`/`pg_qr_link` backend, bukan
+  dibuat di perangkat.
+- Jika staging membalas `502`, backend staging sedang tidak tersedia; cek
+  deployment sebelum menguji alur transaksi.
