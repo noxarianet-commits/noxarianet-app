@@ -276,7 +276,7 @@ const styles = StyleSheet.create({
   // Home Skeleton
   homeContainer: {
     paddingHorizontal: layout.screenPadding,
-    paddingTop: spacing.sm,
+    paddingTop: spacing.base + 2,
   },
   homeTopBar: {
     flexDirection: 'row',

@@ -456,7 +456,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: spacing.xs,
+    paddingTop: spacing.base + 2,
+    paddingBottom: spacing.xs,
   },
   topBarLeft: {
     flexDirection: 'row',
