@@ -10,6 +10,7 @@ import { PrimaryButton } from '@/components/ui/Buttons';
 import { InfoBanner } from '@/components/ui/InfoBanner';
 import { Screen } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { ProductDetailSkeleton } from '@/components/ui/Skeleton';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { UnderlineTabs } from '@/components/ui/Tabs';
 import { ProductArtwork } from '@/components/product/ProductArtwork';
@@ -89,12 +90,7 @@ export default function ProductDetailScreen() {
   };
 
   if (productQuery.isPending) {
-    return (
-      <Screen>
-        <AppHeader title="Detail produk" />
-        <LoadingState label="Memuat produk…" />
-      </Screen>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product || (!isPostpaid && !server)) {
@@ -177,10 +173,17 @@ export default function ProductDetailScreen() {
             <View key={step.icon} style={styles.step}>
               <MaterialCommunityIcons
                 name={step.icon}
-                size={17}
+                size={16}
                 color={colors.teal}
+                style={styles.stepIcon}
               />
-              <AppText variant="bodySmall" color={colors.muted}>
+              <AppText
+                variant="bodySmall"
+                color={colors.muted}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                style={styles.stepLabel}
+              >
                 {step.label}
               </AppText>
             </View>
@@ -298,7 +301,11 @@ export default function ProductDetailScreen() {
                 ? 'NOMINAL BEBAS'
                 : 'HARGA'}
           </AppText>
-          <AppText style={styles.priceValue}>
+          <AppText
+            style={styles.priceValue}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+          >
             {isPostpaid
               ? billVariantFee(selectedVariant) > 0
                 ? formatRupiah(billVariantFee(selectedVariant))
@@ -342,9 +349,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
+    flexShrink: 0,
   },
   heroCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 3,
   },
   brandRow: {
@@ -374,9 +383,16 @@ const styles = StyleSheet.create({
   },
   step: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
+  },
+  stepIcon: {
+    flexShrink: 0,
+  },
+  stepLabel: {
+    flexShrink: 1,
   },
   serverTabs: {
     marginTop: spacing.xs,
@@ -404,6 +420,7 @@ const styles = StyleSheet.create({
   },
   footerPrice: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   priceValue: {
@@ -412,6 +429,7 @@ const styles = StyleSheet.create({
     color: colors.ink,
   },
   cta: {
-    minWidth: 140,
+    minWidth: 130,
+    flexShrink: 0,
   },
 });

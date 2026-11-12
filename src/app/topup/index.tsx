@@ -17,6 +17,7 @@ import { TextField } from '@/components/ui/TextField';
 import { useBalance } from '@/hooks/useBalance';
 import { getErrorMessage } from '@/lib/errors';
 import { formatDateTime, formatRupiah } from '@/lib/format';
+import { notifyTopupPending } from '@/lib/notifications';
 import { saveTopupInfo } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
@@ -95,6 +96,7 @@ export default function TopupScreen() {
     setSubmitting(true);
     try {
       const response = await createTopup(numericAmount);
+      notifyTopupPending(response.total || response.amount || numericAmount);
       await saveTopupInfo({
         ref: response.topup_id,
         qrLink: response.qr_link,
@@ -122,11 +124,17 @@ export default function TopupScreen() {
         <AppHeader title="Top up saldo" subtitle="Bayar dengan QRIS" />
 
         <View style={styles.balanceHead}>
-          <View>
+          <View style={styles.balanceHeadLeft}>
             <AppText variant="labelSmall" color={colors.muted}>
               SALDO SAAT INI
             </AppText>
-            <AppText style={styles.balanceValue}>{formatRupiah(balance)}</AppText>
+            <AppText
+              style={styles.balanceValue}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {formatRupiah(balance)}
+            </AppText>
           </View>
           <View style={styles.limitPill}>
             <AppText variant="labelSmall" color={colors.muted}>
@@ -222,6 +230,8 @@ export default function TopupScreen() {
                   <AppText
                     variant="labelMedium"
                     color={active ? colors.coralInk : colors.inkSoft}
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
                   >
                     {formatRupiah(preset)}
                   </AppText>
@@ -281,6 +291,10 @@ const styles = StyleSheet.create({
     gap: spacing.md,
     marginBottom: spacing.base,
   },
+  balanceHeadLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
   balanceValue: {
     fontFamily: fonts.monoMedium,
     fontSize: 28,
@@ -294,6 +308,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     backgroundColor: colors.surface,
+    flexShrink: 0,
   },
   pendingCard: {
     marginBottom: spacing.base,
@@ -310,9 +325,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.goldSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   pendingCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   pendingActions: {

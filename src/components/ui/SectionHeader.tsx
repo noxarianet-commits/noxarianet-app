@@ -56,9 +56,11 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   action: {
+    flexShrink: 0,
     paddingVertical: 8,
     paddingLeft: 12,
     fontFamily: fonts.semiBold,

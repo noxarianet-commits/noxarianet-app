@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
@@ -21,8 +21,10 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useCountdown } from '@/hooks/useCountdown';
+import { useHardwareBackPress } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
 import { formatCountdown, formatRupiah } from '@/lib/format';
+import { notifyOrderFailed, notifyOrderSuccess } from '@/lib/notifications';
 import { pollDelay } from '@/lib/polling';
 import { loadPaymentInfo } from '@/lib/storage';
 import {
@@ -42,6 +44,15 @@ export default function PaymentScreen() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+
+  useHardwareBackPress(() => {
+    if (cancelVisible) {
+      setCancelVisible(false);
+      return true;
+    }
+    router.replace('/(tabs)/pesanan');
+    return true;
+  });
 
   const cacheQuery = useQuery({
     queryKey: ['payment-cache', orderId],
@@ -80,14 +91,24 @@ export default function PaymentScreen() {
     order?.price ??
     0;
 
+  const notifiedOrderStatusRef = useRef<string | null>(null);
+
   useEffect(() => {
     if (status && isFinalOrderStatus(status)) {
+      if (notifiedOrderStatusRef.current !== status) {
+        notifiedOrderStatusRef.current = status;
+        if (status === 'COMPLETED') {
+          notifyOrderSuccess(order?.product || 'Pesanan', order?.variant);
+        } else if (status === 'FAILED' || status === 'CANCELLED') {
+          notifyOrderFailed(order?.product || 'Pesanan', order?.variant);
+        }
+      }
       void queryClient.invalidateQueries({ queryKey: ['balance'] });
       void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
       void queryClient.invalidateQueries({ queryKey: ['order', orderId] });
     }
-  }, [orderId, queryClient, status]);
+  }, [order?.product, order?.variant, orderId, queryClient, status]);
 
   const copyValue = async (label: string, value: string) => {
     await Clipboard.setStringAsync(value);
@@ -280,7 +301,13 @@ export default function PaymentScreen() {
                 <AppText variant="labelSmall" color={colors.muted}>
                   TOTAL BAYAR
                 </AppText>
-                <AppText style={styles.amount}>{formatRupiah(total)}</AppText>
+                <AppText
+                  style={styles.amount}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {formatRupiah(total)}
+                </AppText>
               </View>
 
               {expired ? (
@@ -477,6 +504,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -487,6 +515,7 @@ const styles = StyleSheet.create({
   qrBox: {
     width: 248,
     height: 248,
+    maxWidth: '100%',
     borderRadius: radius.md,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
@@ -552,6 +581,9 @@ const styles = StyleSheet.create({
   copyRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
     marginTop: spacing.xs,
   },
   actions: {

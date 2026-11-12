@@ -144,21 +144,36 @@ export default function BalanceHistoryScreen() {
             </AppText>
             <AppText variant="headlineLarge">Riwayat saldo</AppText>
             <View style={styles.balanceBox}>
-              <View>
+              <View style={styles.balanceBoxLeft}>
                 <AppText variant="labelSmall" color={colors.muted}>
                   SALDO SAAT INI
                 </AppText>
-                <AppText style={styles.balanceValue}>
+                <AppText
+                  style={styles.balanceValue}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
                   {formatRupiah(balanceQuery.data?.balance ?? 0)}
                 </AppText>
               </View>
-              <AppText variant="bodySmall" color={colors.muted} align="right">
+              <AppText
+                variant="bodySmall"
+                color={colors.muted}
+                align="right"
+                style={styles.balanceBoxRight}
+              >
                 Batas saldo{'\n'}
                 {formatRupiah(balanceQuery.data?.balance_limit ?? 0)}
               </AppText>
             </View>
 
-            <FilterChips items={FILTERS} value={type} onChange={setType} />
+            <FilterChips
+              items={FILTERS}
+              value={type}
+              onChange={setType}
+              style={styles.filtersScroll}
+              contentContainerStyle={styles.filtersContent}
+            />
           </View>
         }
         ListEmptyComponent={
@@ -223,11 +238,24 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: spacing.base,
   },
+  balanceBoxLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  balanceBoxRight: {
+    flexShrink: 0,
+  },
   balanceValue: {
     fontFamily: fonts.monoMedium,
     fontSize: 26,
     lineHeight: 34,
     color: colors.ink,
+  },
+  filtersScroll: {
+    marginHorizontal: -layout.screenPadding,
+  },
+  filtersContent: {
+    paddingHorizontal: layout.screenPadding,
   },
   row: {
     flexDirection: 'row',
@@ -243,6 +271,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   iconIn: {
     backgroundColor: colors.tealSoft,
@@ -252,12 +281,14 @@ const styles = StyleSheet.create({
   },
   rowCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   amount: {
     fontFamily: fonts.monoMedium,
     fontSize: 13,
     textAlign: 'right',
+    flexShrink: 0,
   },
   footer: {
     paddingVertical: spacing.lg,

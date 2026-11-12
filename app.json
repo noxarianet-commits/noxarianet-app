@@ -8,14 +8,14 @@
     "icon": "./assets/images/icon.png",
     "scheme": "noxarianet",
     "userInterfaceStyle": "light",
-    "backgroundColor": "#F5F1E9",
+    "backgroundColor": "#F8F7FC",
     "android": {
       "package": "com.noxarianet.store",
       "versionCode": 1,
       "allowBackup": false,
       "predictiveBackGestureEnabled": true,
       "adaptiveIcon": {
-        "backgroundColor": "#F5F1E9",
+        "backgroundColor": "#4D1B8C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
@@ -25,7 +25,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#F5F1E9",
+          "backgroundColor": "#4D1B8C",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain"

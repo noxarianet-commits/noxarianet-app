@@ -22,7 +22,9 @@ import {
   MaintenanceScreen,
   UpdateScreen,
 } from '@/components/system/SystemScreens';
+import { NotificationBar } from '@/components/ui/NotificationBar';
 import { useAppConfig } from '@/hooks/useAppConfig';
+import { initNotifications } from '@/lib/notifications';
 import { isVersionBelow } from '@/lib/version';
 import { queryClient } from '@/query/queryClient';
 import { navigationTheme, paperTheme } from '@/theme';
@@ -31,6 +33,10 @@ import { colors } from '@/theme/tokens';
 void SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
+  useEffect(() => {
+    void initNotifications();
+  }, []);
+
   return (
     <GestureHandlerRootView style={styles.root}>
       <QueryClientProvider client={queryClient}>
@@ -41,6 +47,7 @@ export default function RootLayout() {
                 <StatusBar style="dark" />
                 <NavigationBar style="light" />
                 <BootstrapGate />
+                <NotificationBar />
               </ThemeProvider>
             </AuthProvider>
           </SafeAreaProvider>

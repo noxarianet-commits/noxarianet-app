@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: radius.pill,
     alignSelf: 'flex-start',
+    flexShrink: 0,
   },
   compact: {
     paddingHorizontal: 6,

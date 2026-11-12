@@ -43,7 +43,12 @@ export function OrderRow({
       </View>
 
       <View style={styles.bottom}>
-        <AppText variant="labelSmall" color={colors.muted} numberOfLines={1}>
+        <AppText
+          variant="labelSmall"
+          color={colors.muted}
+          numberOfLines={1}
+          style={styles.orderId}
+        >
           {order.id}
         </AppText>
         <MaterialCommunityIcons
@@ -79,6 +84,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   price: {
@@ -86,11 +92,16 @@ const styles = StyleSheet.create({
     fontSize: 13,
     borderRadius: radius.sm,
     textAlign: 'right',
+    flexShrink: 0,
   },
   bottom: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.sm,
+  },
+  orderId: {
+    flex: 1,
+    minWidth: 0,
   },
 });

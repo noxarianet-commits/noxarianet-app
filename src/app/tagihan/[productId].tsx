@@ -352,7 +352,11 @@ export default function BillInquiryScreen() {
             <AppText variant="labelSmall" color={colors.muted}>
               TOTAL BAYAR
             </AppText>
-            <AppText style={styles.footerPrice}>
+            <AppText
+              style={styles.footerPrice}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {quote ? formatRupiah(quote.bill.total) : '—'}
             </AppText>
           </View>
@@ -396,6 +400,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   countdownPill: {
@@ -406,6 +411,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
     paddingHorizontal: 9,
     paddingVertical: 3,
+    flexShrink: 0,
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -423,6 +429,7 @@ const styles = StyleSheet.create({
   },
   footerTotal: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   footerPrice: {
@@ -431,5 +438,6 @@ const styles = StyleSheet.create({
   },
   submit: {
     minWidth: 150,
+    flexShrink: 0,
   },
 });

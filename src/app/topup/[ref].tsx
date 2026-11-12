@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
@@ -21,8 +21,10 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useCountdown } from '@/hooks/useCountdown';
+import { useHardwareBackPress } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
 import { formatCountdown, formatRupiah } from '@/lib/format';
+import { notifyTopupSuccess } from '@/lib/notifications';
 import { pollDelay } from '@/lib/polling';
 import { loadTopupInfo } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
@@ -37,6 +39,19 @@ export default function TopupDetailScreen() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [wasCancelled, setWasCancelled] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  useHardwareBackPress(() => {
+    if (cancelVisible) {
+      setCancelVisible(false);
+      return true;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)');
+    }
+    return true;
+  });
 
   const cacheQuery = useQuery({
     queryKey: ['topup-cache', ref],
@@ -100,14 +115,19 @@ export default function TopupDetailScreen() {
   const countdown = useCountdown(expiresAt);
   const expired = countdown.expired && !!expiresAt;
   const balanceAfter = record?.balance_after;
+  const notifiedSuccessRef = useRef(false);
 
   useEffect(() => {
     if (status === 'completed') {
+      if (!notifiedSuccessRef.current) {
+        notifiedSuccessRef.current = true;
+        notifyTopupSuccess(amount || total);
+      }
       void queryClient.invalidateQueries({ queryKey: ['balance'] });
       void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.topupPending });
     }
-  }, [queryClient, status]);
+  }, [amount, queryClient, status, total]);
 
   const copyRef = async () => {
     await Clipboard.setStringAsync(ref);
@@ -298,7 +318,13 @@ export default function TopupDetailScreen() {
             <AppText variant="labelSmall" color={colors.muted}>
               TOTAL BAYAR
             </AppText>
-            <AppText style={styles.amount}>{formatRupiah(total)}</AppText>
+            <AppText
+              style={styles.amount}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
+              {formatRupiah(total)}
+            </AppText>
           </View>
 
           {expired ? (
@@ -376,6 +402,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
@@ -386,6 +413,7 @@ const styles = StyleSheet.create({
   qrBox: {
     width: 248,
     height: 248,
+    maxWidth: '100%',
     borderRadius: radius.md,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,

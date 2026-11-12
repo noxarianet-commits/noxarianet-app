@@ -172,9 +172,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   emailCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   note: {
