@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "765894686133",
+    "project_id": "noxarianet-app",
+    "storage_bucket": "noxarianet-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:765894686133:android:1341918b62c2de14bfd5fc",
+        "android_client_info": {
+          "package_name": "com.noxarianet.store"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC_hREixiFetdELXHPIroj-wLONV4v8n7U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

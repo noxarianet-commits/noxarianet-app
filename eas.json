@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://staging.noxarianet.web.id/api"
+        "EXPO_PUBLIC_API_BASE_URL": "https://www.noxarianet.web.id/api"
       }
     },
     "production": {

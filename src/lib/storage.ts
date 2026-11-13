@@ -216,6 +216,36 @@ export async function clearTopupInfo(ref: string) {
   await removeFromIndex(TOPUP_INDEX_KEY, ref);
 }
 
+// ── Push token ────────────────────────────────────────────────────────────
+// Token disimpan supaya saat logout kita bisa mendaftarkan "keluar" dari
+// backend tanpa harus meminta token baru ke Expo.
+
+const PUSH_TOKEN_KEY = 'noxarianet.pushToken';
+
+export async function savePushToken(token: string | null) {
+  if (!token) {
+    try {
+      await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
+    } catch {
+      // ignore
+    }
+    return;
+  }
+  await writeJson(PUSH_TOKEN_KEY, token);
+}
+
+export async function loadPushToken(): Promise<string | null> {
+  return readJson<string>(PUSH_TOKEN_KEY);
+}
+
+export async function clearPushToken() {
+  try {
+    await AsyncStorage.removeItem(PUSH_TOKEN_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 // ── Home info modal ───────────────────────────────────────────────────────
 
 const INFO_MODAL_TTL = 24 * 60 * 60 * 1000;

@@ -5,6 +5,7 @@ import type {
   CancelOrderResponse,
   CreateOrderPayload,
   CreateOrderResponse,
+  DeviceListResponse,
   HomeData,
   LoginResponse,
   MeResponse,
@@ -15,6 +16,8 @@ import type {
   OtpSentResponse,
   ProductDetailResponse,
   ProductListResponse,
+  RegisterDevicePayload,
+  RegisterDeviceResponse,
   RegisterStartResponse,
   UserProfile,
   ValidateProductPayload,
@@ -241,6 +244,31 @@ export function cancelOrder(id: string) {
     `/mobile/orders/${encodeURIComponent(id)}/cancel`,
     { method: 'POST' },
   );
+}
+
+// ── Push notification devices ──────────────────────────────────────────────
+
+export function registerDevice(payload: RegisterDevicePayload) {
+  return apiRequest<RegisterDeviceResponse>('/mobile/devices', {
+    method: 'POST',
+    body: payload,
+    // Gagal mendaftar push token tidak boleh mengganggu alur login.
+    notifyAuthError: false,
+  });
+}
+
+export function unregisterDevice(pushToken: string) {
+  return apiRequest<MessageResponse>(
+    `/mobile/devices?push_token=${encodeURIComponent(pushToken)}`,
+    {
+      method: 'DELETE',
+      notifyAuthError: false,
+    },
+  );
+}
+
+export function listDevices() {
+  return apiRequest<DeviceListResponse>('/mobile/devices');
 }
 
 // ── Profile helpers ───────────────────────────────────────────────────────

@@ -1,3 +1,10 @@
+import {
+  AndroidImportance,
+  scheduleNotificationAsync,
+  setNotificationChannelAsync,
+  setNotificationHandler,
+  requestPermissionsAsync,
+} from 'expo-notifications';
 import { Platform } from 'react-native';
 
 import { formatRupiah } from '@/lib/format';
@@ -21,58 +28,58 @@ export function addNotificationListener(listener: Listener) {
   };
 }
 
-// Safely attempt to require expo-notifications if installed
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-let Notifications: any = null;
-try {
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  Notifications = require('expo-notifications');
-} catch {
-  // expo-notifications not installed yet
-}
+/**
+ * ID channel notifikasi Android. WAJIB sama dengan nilai `defaultChannel` di
+ * app.json dan `PUSH_CHANNEL_ID` di backend — kalau channelId menunjuk channel
+ * yang belum ada di perangkat, notifikasi tidak tampil sama sekali.
+ */
+export const NOTIFICATION_CHANNEL_ID = 'noxarianet_transaksi';
 
 let isInitialized = false;
 
 export async function initNotifications() {
-  if (isInitialized || !Notifications) return;
+  if (isInitialized) return;
   isInitialized = true;
 
   try {
-    Notifications.setNotificationHandler({
+    setNotificationHandler({
       handleNotification: async () => ({
-        shouldShowAlert: true,
+        shouldShowBanner: true,
+        shouldShowList: true,
         shouldPlaySound: true,
         shouldSetBadge: true,
-        shouldShowBanner: true,
       }),
     });
 
     if (Platform.OS === 'android') {
-      await Notifications.setNotificationChannelAsync('noxarianet_transaksi', {
+      // Channel harus ada SEBELUM push token diminta (syarat Android 13+).
+      await setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
         name: 'Status Transaksi & Saldo',
-        importance: Notifications.AndroidImportance.MAX,
+        importance: AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#E86B4F',
         sound: 'default',
       });
     }
 
-    await Notifications.requestPermissionsAsync();
+    await requestPermissionsAsync();
   } catch {
     // Graceful fallback if permission request fails or unsupported
+    isInitialized = false;
   }
 }
 
 async function triggerSystemNotification(title: string, body: string) {
-  if (!Notifications) return;
   try {
     await initNotifications();
-    await Notifications.scheduleNotificationAsync({
+    await scheduleNotificationAsync({
       content: {
         title,
         body,
         sound: true,
-        ...(Platform.OS === 'android' ? { channelId: 'noxarianet_transaksi' } : null),
+        ...(Platform.OS === 'android'
+          ? { channelId: NOTIFICATION_CHANNEL_ID }
+          : null),
       },
       trigger: null,
     });
@@ -81,11 +88,20 @@ async function triggerSystemNotification(title: string, body: string) {
   }
 }
 
+/**
+ * Tampilkan notifikasi ke pengguna.
+ *
+ * @param options.system Saat `false`, hanya banner dalam aplikasi yang muncul —
+ *   notifikasi sistem tidak dibuat. Dipakai saat menerima push notification di
+ *   foreground: sistem sudah menampilkan bannernya sendiri, jadi tidak boleh
+ *   ada notifikasi kedua.
+ */
 export function showNotification(options: {
   title: string;
   body: string;
   tone: 'success' | 'warning' | 'danger' | 'info';
   icon?: string;
+  system?: boolean;
 }) {
   const notification: AppNotification = {
     id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
@@ -106,7 +122,9 @@ export function showNotification(options: {
   }
 
   // 2. Dispatch to Android Status Bar / Notification Center
-  void triggerSystemNotification(options.title, options.body);
+  if (options.system !== false) {
+    void triggerSystemNotification(options.title, options.body);
+  }
 }
 
 /**
@@ -158,4 +176,3 @@ export function notifyOrderFailed(productName: string, variantName?: string) {
     icon: 'alert-circle-outline',
   });
 }
-
