@@ -1,4 +1,4 @@
-import { useFocusEffect } from 'expo-router';
+import { router, useFocusEffect } from 'expo-router';
 import { useCallback, useRef } from 'react';
 import { BackHandler, Platform, ToastAndroid } from 'react-native';
 
@@ -57,5 +57,17 @@ export function useHardwareBackPress(handler: () => boolean | void) {
       return () => subscription.remove();
     }, [handler]),
   );
+}
+
+/**
+ * Hook for secondary tabs (Profil/Akun, Katalog, Pesanan) to ensure Android
+ * hardware back press returns smoothly to the initial Home tab (Beranda)
+ * instead of unexpectedly closing the application.
+ */
+export function useTabBackToHome() {
+  useHardwareBackPress(() => {
+    router.navigate('/(tabs)');
+    return true;
+  });
 }
 

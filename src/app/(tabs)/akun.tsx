@@ -12,6 +12,7 @@ import { ListRow } from '@/components/ui/ListRow';
 import { ScreenScroll } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { useAppConfig } from '@/hooks/useAppConfig';
+import { useTabBackToHome } from '@/hooks/useBackHandler';
 import { useHome } from '@/hooks/useHome';
 import { useMe } from '@/hooks/useMe';
 import { supportWhatsAppNumber, supportWhatsAppUrl } from '@/lib/settings';
@@ -22,6 +23,8 @@ export default function AccountScreen() {
   const meQuery = useMe();
   const homeQuery = useHome();
   const configQuery = useAppConfig();
+
+  useTabBackToHome();
 
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);

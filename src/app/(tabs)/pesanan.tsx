@@ -15,6 +15,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { FilterChips } from '@/components/ui/Tabs';
+import { useTabBackToHome } from '@/hooks/useBackHandler';
 import { useOrders } from '@/hooks/useOrders';
 import {
   colors,
@@ -27,6 +28,8 @@ import {
 export default function OrdersScreen() {
   const [status, setStatus] = useState('ALL');
   const ordersQuery = useOrders(status);
+
+  useTabBackToHome();
 
   const orders = useMemo(
     () => ordersQuery.data?.pages.flatMap((page) => page.data) ?? [],
