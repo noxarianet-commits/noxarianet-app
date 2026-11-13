@@ -8,7 +8,9 @@ export function useAppConfig() {
     queryKey: queryKeys.config,
     queryFn: getConfig,
     select: (response) => response.data,
-    staleTime: 5 * 60 * 1000,
+    // Samakan dengan cache server (max-age=60) supaya perubahan saklar admin
+    // cepat terlihat di app.
+    staleTime: 60 * 1000,
     retry: 2,
   });
 }

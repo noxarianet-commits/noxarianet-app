@@ -29,6 +29,8 @@ export type MobileConfig = {
     tickets?: boolean;
   };
   payment_methods: string[];
+  /** Flag efektif "Wajib Validasi Akun" untuk channel app. */
+  mandatory_validation?: boolean;
   shop_status?: ShopStatus;
 };
 

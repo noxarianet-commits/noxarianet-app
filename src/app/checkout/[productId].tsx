@@ -22,6 +22,7 @@ import { KeyboardScreen, Screen } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { TextField } from '@/components/ui/TextField';
+import { useAppConfig } from '@/hooks/useAppConfig';
 import { useBalance } from '@/hooks/useBalance';
 import { useProduct } from '@/hooks/useProduct';
 import { getErrorMessage, getErrorCode } from '@/lib/errors';
@@ -40,6 +41,7 @@ import {
   openDenomMin,
   variantPrice,
 } from '@/lib/products';
+import { isMandatoryValidationEnabled } from '@/lib/settings';
 import { savePaymentInfo } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
@@ -49,6 +51,8 @@ type ValidationState = {
   valid: boolean;
   title: string;
   message: string;
+  /** true = validasi dilewati server (produk tanpa cek ID / saklar admin off). */
+  skipped?: boolean;
 };
 
 export default function CheckoutScreen() {
@@ -135,8 +139,15 @@ function CheckoutForm({
 }) {
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
+  const configQuery = useAppConfig();
 
   const fieldDefs = useMemo(() => getVariantFields(variant), [variant]);
+
+  // Saklar "Wajib Validasi Akun" untuk channel app. Nilai hilang / config
+  // gagal dimuat dianggap wajib (fail-safe, sama seperti backend).
+  const validationMandatory = isMandatoryValidationEnabled(configQuery.data);
+  const validationAvailable = Boolean(variant.validation?.available);
+  const requiresValidation = validationAvailable && validationMandatory;
 
   const [fields, setFields] = useState<Record<string, string>>(() =>
     Object.fromEntries(fieldDefs.map((field) => [field.key, ''])),
@@ -190,7 +201,7 @@ function CheckoutForm({
     return clean;
   };
 
-  const handleValidate = async () => {
+  const runValidation = async (): Promise<boolean> => {
     const errors: Record<string, string> = {};
     for (const field of fieldDefs) {
       if (field.required !== false && !fields[field.key]?.trim()) {
@@ -202,12 +213,15 @@ function CheckoutForm({
     setFormErrorCode(undefined);
     setValidation(null);
 
-    if (Object.keys(errors).length) return;
+    if (Object.keys(errors).length) return false;
     const customerId = targetKey ? fields[targetKey]?.trim() : '';
     if (!customerId) {
       setFormError('Isi ID akun / nomor tujuan terlebih dahulu.');
-      return;
+      return false;
     }
+
+    // Varian tanpa validasi / saklar admin nonaktif: jangan panggil provider.
+    if (!requiresValidation) return true;
 
     setValidating(true);
     try {
@@ -219,33 +233,42 @@ function CheckoutForm({
       });
       if (response.valid) {
         const name = response.display_name || response.account_name;
+        const skipped = response.validation_available === false;
         setValidation({
           valid: true,
-          title: name ? 'ID akun ditemukan' : 'ID valid',
-          message:
-            name ||
-            response.message ||
-            'ID akun sesuai. Lanjutkan untuk membuat pesanan.',
+          skipped,
+          title: skipped ? 'Tanpa cek ID' : name ? 'ID akun ditemukan' : 'ID valid',
+          message: skipped
+            ? response.message ||
+              'Validasi akun sedang dinonaktifkan. Pastikan ID sudah benar.'
+            : name ||
+              response.message ||
+              'ID akun sesuai. Lanjutkan untuk membuat pesanan.',
         });
-      } else {
-        setValidation({
-          valid: false,
-          title: 'ID tidak valid',
-          message: response.message || 'Periksa kembali ID akun yang kamu isi.',
-        });
+        return true;
       }
+
+      setValidation({
+        valid: false,
+        title: 'ID tidak valid',
+        message: response.message || 'Periksa kembali ID akun yang kamu isi.',
+      });
+      return false;
     } catch (error) {
       setValidation({
         valid: false,
         title: 'Validasi gagal',
         message: getErrorMessage(error),
       });
+      return false;
     } finally {
       setValidating(false);
     }
   };
 
   const handleSubmit = async () => {
+    if (submitting || validating) return;
+
     setFormError(null);
     setFormErrorCode(undefined);
 
@@ -276,6 +299,16 @@ function CheckoutForm({
     if (effectivePaymentType === 'balance' && insufficientBalance) {
       setFormError('Saldo tidak mencukupi. Pilih QRIS atau top up dulu.');
       return;
+    }
+
+    // Wajib cek ID (channel app): validasi otomatis sekali sebelum membuat
+    // pesanan. Saat saklar admin nonaktif, langkah ini dilewati total.
+    if (
+      requiresValidation &&
+      !(validation?.valid === true && validation.skipped !== true)
+    ) {
+      const valid = await runValidation();
+      if (!valid) return;
     }
 
     const payload: CreateOrderPayload = {
@@ -408,18 +441,31 @@ function CheckoutForm({
               ))}
             </View>
 
-            {variant.validation?.available ? (
-              <SecondaryButton
-                onPress={() => void handleValidate()}
-                loading={validating}
-                disabled={validating || submitting}
-                icon="account-check-outline"
-              >
-                Cek ID akun
-              </SecondaryButton>
+            {requiresValidation ? (
+              <>
+                <SecondaryButton
+                  onPress={() => void runValidation()}
+                  loading={validating}
+                  disabled={validating || submitting}
+                  icon="account-check-outline"
+                >
+                  Cek ID akun
+                </SecondaryButton>
+                {!validation ? (
+                  <AppText variant="bodySmall" color={colors.muted}>
+                    ID akun akan dicek otomatis saat kamu membuat pesanan.
+                  </AppText>
+                ) : null}
+              </>
+            ) : validationAvailable ? (
+              <InfoBanner
+                tone="warning"
+                title="Cek ID dinonaktifkan sementara"
+                message="Pengecekan ID ke penyedia sedang dinonaktifkan sementara oleh admin. Pesanan tetap diproses — mohon pastikan ID yang kamu masukkan sudah benar."
+              />
             ) : null}
 
-            {validation ? (
+            {requiresValidation && validation ? (
               <InfoBanner
                 tone={validation.valid ? 'success' : 'danger'}
                 title={validation.title}
