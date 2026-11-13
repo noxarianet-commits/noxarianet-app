@@ -27,7 +27,7 @@ function tabIcon(outline: IconName, filled: IconName) {
 export default function TabsLayout() {
   return (
     <Tabs
-      backBehavior="history"
+      backBehavior="initialRoute"
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: colors.coralDark,
