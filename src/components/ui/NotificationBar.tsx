@@ -1,6 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import type { ComponentProps } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Pressable,
@@ -52,9 +52,26 @@ const TONE_STYLES = {
 export function NotificationBar() {
   const insets = useSafeAreaInsets();
   const [current, setCurrent] = useState<AppNotification | null>(null);
-  const translateY = useRef(new Animated.Value(-120)).current;
-  const opacity = useRef(new Animated.Value(0)).current;
+  const [translateY] = useState(() => new Animated.Value(-120));
+  const [opacity] = useState(() => new Animated.Value(0));
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleDismiss = useCallback(() => {
+    Animated.parallel([
+      Animated.timing(translateY, {
+        toValue: -120,
+        duration: 250,
+        useNativeDriver: true,
+      }),
+      Animated.timing(opacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => {
+      setCurrent(null);
+    });
+  }, [opacity, translateY]);
 
   useEffect(() => {
     const unsubscribe = addNotificationListener((notification) => {
@@ -86,24 +103,7 @@ export function NotificationBar() {
       unsubscribe();
       if (dismissTimer.current) clearTimeout(dismissTimer.current);
     };
-  }, []);
-
-  const handleDismiss = () => {
-    Animated.parallel([
-      Animated.timing(translateY, {
-        toValue: -120,
-        duration: 250,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setCurrent(null);
-    });
-  };
+  }, [handleDismiss, opacity, translateY]);
 
   if (!current) return null;
 

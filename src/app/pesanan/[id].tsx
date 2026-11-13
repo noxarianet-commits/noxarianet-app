@@ -105,7 +105,7 @@ export default function OrderDetailScreen() {
     select: (response) => response.data,
     enabled: !!orderId,
     refetchInterval: (query) => {
-      const status = query.state.data?.status;
+      const status = query.state.data?.data?.status;
       if (status && isFinalOrderStatus(status)) return false;
       return 20000;
     },
@@ -296,7 +296,7 @@ export default function OrderDetailScreen() {
         />
         <ReceiptRow
           label="Waktu Pemesanan"
-          value={order.created_at ? formatDateTime(order.created_at) : '-'}
+          value={order.timestamp ? formatDateTime(order.timestamp) : '-'}
         />
       </SurfaceCard>
 
@@ -375,7 +375,7 @@ export default function OrderDetailScreen() {
         confirmLabel="Ya, Batalkan"
         cancelLabel="Kembali"
         onConfirm={() => void handleCancel()}
-        onCancel={() => setCancelVisible(false)}
+        onDismiss={() => setCancelVisible(false)}
         loading={cancelling}
       />
     </ScreenScroll>

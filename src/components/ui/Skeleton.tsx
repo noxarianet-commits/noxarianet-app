@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useState } from 'react';
 import {
   Animated,
   StyleProp,
@@ -22,7 +22,7 @@ export function Skeleton({
   borderRadius?: number;
   style?: StyleProp<ViewStyle>;
 }) {
-  const opacity = useRef(new Animated.Value(0.35)).current;
+  const [opacity] = useState(() => new Animated.Value(0.35));
 
   useEffect(() => {
     const animation = Animated.loop(
