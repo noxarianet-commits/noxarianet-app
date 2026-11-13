@@ -46,7 +46,7 @@ export default function AccountScreen() {
     if (granted) {
       notifyCustomMessage(
         'Notifikasi Aktif! 🔔',
-        'Aplikasi Noxarianet Store siap mengirimkan pesan transaksi dan pengumuman.',
+        'Aplikasi Noxarianet siap mengirimkan pesan transaksi dan pengumuman.',
       );
     }
   }, []);
@@ -263,7 +263,7 @@ export default function AccountScreen() {
         {/* Minimal Footer */}
         <View style={styles.footer}>
           <AppText variant="labelSmall" color={colors.muted} style={styles.footerBrand}>
-            NOXARIANET STORE
+            NOXARIANET
           </AppText>
           <AppText variant="bodySmall" color={colors.muted} align="center">
             Versi {version}

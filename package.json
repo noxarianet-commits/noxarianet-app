@@ -1,5 +1,5 @@
 {
-  "name": "noxarianet-store-app",
+  "name": "noxarianet",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "dependencies": {
