@@ -45,7 +45,7 @@ export function ProductCard({
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
       <View style={styles.media}>
-        <ProductArtwork product={product} size={52} />
+        <ProductArtwork product={product} size={38} />
       </View>
 
       <View style={styles.metaRow}>
@@ -111,20 +111,20 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    gap: 3,
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    gap: 2,
   },
   pressed: {
     opacity: 0.72,
   },
   media: {
-    height: 72,
+    height: 54,
     borderRadius: radius.sm,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: spacing.xs,
     overflow: 'hidden',
   },
   metaRow: {
@@ -144,12 +144,13 @@ const styles = StyleSheet.create({
     lineHeight: 12,
   },
   name: {
-    minHeight: 42,
-    lineHeight: 21,
+    minHeight: 38,
+    fontSize: 13,
+    lineHeight: 18,
   },
   footer: {
     marginTop: 'auto',
-    paddingTop: spacing.sm,
+    paddingTop: spacing.xs,
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
@@ -157,6 +158,7 @@ const styles = StyleSheet.create({
   },
   priceWrap: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   price: {

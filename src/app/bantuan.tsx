@@ -181,9 +181,11 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 253, 248, 0.16)',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   chatCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   chatTitle: {
@@ -206,12 +208,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.coralSoft,
+    flexShrink: 0,
   },
   rowIconTeal: {
     backgroundColor: colors.tealSoft,
   },
   rowCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   card: {
@@ -233,9 +237,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.coralSoft,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   tipCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   footer: {

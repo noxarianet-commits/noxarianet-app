@@ -1,7 +1,7 @@
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
-import { colors, fonts, radius } from '@/theme/tokens';
+import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
 type Item = { key: string; label: string };
 
@@ -17,38 +17,40 @@ export function UnderlineTabs({
   style?: object;
 }) {
   return (
-    <ScrollView
-      horizontal
-      showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.underlineRow, style]}
-    >
-      {items.map((item) => {
-        const active = item.key === value;
-        return (
-          <Pressable
-            key={item.key}
-            onPress={() => onChange(item.key)}
-            style={styles.underlineItem}
-            accessibilityRole="tab"
-            accessibilityState={{ selected: active }}
-          >
-            <AppText
-              variant="labelLarge"
-              color={active ? colors.ink : colors.muted}
-              style={active ? styles.activeLabel : undefined}
+    <View style={[styles.underlineContainer, style]}>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.underlineRow}
+      >
+        {items.map((item) => {
+          const active = item.key === value;
+          return (
+            <Pressable
+              key={item.key}
+              onPress={() => onChange(item.key)}
+              style={styles.underlineItem}
+              accessibilityRole="tab"
+              accessibilityState={{ selected: active }}
             >
-              {item.label}
-            </AppText>
-            <View
-              style={[
-                styles.underline,
-                active ? styles.underlineActive : null,
-              ]}
-            />
-          </Pressable>
-        );
-      })}
-    </ScrollView>
+              <AppText
+                variant="labelLarge"
+                color={active ? colors.coral : colors.muted}
+                style={[styles.tabLabel, active && styles.activeLabel]}
+              >
+                {item.label}
+              </AppText>
+              <View
+                style={[
+                  styles.underline,
+                  active ? styles.underlineActive : null,
+                ]}
+              />
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
   );
 }
 
@@ -57,17 +59,20 @@ export function FilterChips({
   value,
   onChange,
   style,
+  contentContainerStyle,
 }: {
   items: readonly Item[];
   value: string;
   onChange: (key: string) => void;
   style?: object;
+  contentContainerStyle?: object;
 }) {
   return (
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={[styles.chipRow, style]}
+      style={[styles.chipsScroll, style]}
+      contentContainerStyle={[styles.chipRow, contentContainerStyle]}
     >
       {items.map((item) => {
         const active = item.key === value;
@@ -75,15 +80,22 @@ export function FilterChips({
           <Pressable
             key={item.key}
             onPress={() => onChange(item.key)}
-            hitSlop={4}
-            style={[styles.chip, active && styles.chipActive]}
+            hitSlop={6}
+            style={({ pressed }) => [
+              styles.chip,
+              active ? styles.chipActive : styles.chipInactive,
+              pressed && styles.pressed,
+            ]}
             accessibilityRole="button"
             accessibilityState={{ selected: active }}
           >
             <AppText
               variant="labelMedium"
-              color={active ? colors.coralInk : colors.mutedStrong}
-              style={active ? styles.chipActiveLabel : undefined}
+              style={[
+                styles.chipLabel,
+                active ? styles.chipActiveLabel : styles.chipInactiveLabel,
+              ]}
+              numberOfLines={1}
             >
               {item.label}
             </AppText>
@@ -95,45 +107,84 @@ export function FilterChips({
 }
 
 const styles = StyleSheet.create({
+  underlineContainer: {
+    minHeight: 44,
+  },
   underlineRow: {
-    gap: 24,
-    paddingRight: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 20,
   },
   underlineItem: {
-    paddingTop: 6,
-    minHeight: 44,
-    justifyContent: 'space-between',
+    paddingVertical: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  tabLabel: {
+    fontFamily: fonts.medium,
+    fontSize: 15,
   },
   activeLabel: {
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
+    color: colors.coral,
   },
   underline: {
-    height: 2,
+    height: 3,
+    width: '100%',
     backgroundColor: 'transparent',
-    marginTop: 8,
-    borderRadius: 1,
+    marginTop: 6,
+    borderRadius: 2,
   },
   underlineActive: {
     backgroundColor: colors.coral,
   },
+
+  // Chips Styling
+  chipsScroll: {
+    flexGrow: 0,
+  },
   chipRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    paddingRight: 20,
+    paddingRight: 24,
   },
   chip: {
-    minHeight: 38,
+    minHeight: 34,
     justifyContent: 'center',
+    alignItems: 'center',
     paddingHorizontal: 14,
     borderRadius: radius.pill,
+    flexShrink: 0,
+  },
+  chipInactive: {
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: colors.line,
-    backgroundColor: colors.surface,
   },
   chipActive: {
-    backgroundColor: colors.coralSoft,
+    backgroundColor: colors.coral,
+    borderWidth: 1,
     borderColor: colors.coral,
+    shadowColor: colors.coral,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  chipLabel: {
+    fontSize: 12,
+  },
+  chipInactiveLabel: {
+    fontFamily: fonts.medium,
+    color: colors.inkSoft,
   },
   chipActiveLabel: {
-    fontFamily: fonts.semiBold,
+    fontFamily: fonts.bold,
+    color: '#FFFFFF',
+  },
+  pressed: {
+    opacity: 0.8,
   },
 });

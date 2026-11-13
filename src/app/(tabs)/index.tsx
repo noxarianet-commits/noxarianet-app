@@ -1,7 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
-import type { ComponentProps } from 'react';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal } from 'react-native-paper';
@@ -11,49 +10,21 @@ import { useAuth } from '@/auth/AuthProvider';
 import { ProductCard } from '@/components/product/ProductCard';
 import { AppLogo } from '@/components/ui/AppLogo';
 import { AppText } from '@/components/ui/AppText';
-import { Avatar } from '@/components/ui/Avatar';
 import { InfoBanner } from '@/components/ui/InfoBanner';
 import { RemoteArtwork } from '@/components/ui/RemoteArtwork';
 import { ScreenScroll } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { HomeSkeleton } from '@/components/ui/Skeleton';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { BalanceCard } from '@/components/wallet/BalanceCard';
 import { useBalance } from '@/hooks/useBalance';
 import { useAppConfig } from '@/hooks/useAppConfig';
+import { useDoubleBackToExit } from '@/hooks/useBackHandler';
 import { useHome } from '@/hooks/useHome';
 import { useMe } from '@/hooks/useMe';
 import { firstName } from '@/lib/format';
-import { normalizeSiteContent } from '@/lib/settings';
 import { dismissInfoModal, shouldShowInfoModal } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
-
-type IconName = ComponentProps<typeof MaterialCommunityIcons>['name'];
-
-const QUICK_ACTIONS: {
-  key: string;
-  label: string;
-  icon: IconName;
-  to:
-    | { pathname: '/topup' }
-    | { pathname: '/(tabs)/katalog'; params: { type: string } }
-    | { pathname: '/(tabs)/pesanan' }
-    | { pathname: '/bantuan' };
-}[] = [
-  { key: 'topup', label: 'Top up', icon: 'wallet-plus-outline', to: { pathname: '/topup' } },
-  {
-    key: 'bills',
-    label: 'Tagihan',
-    icon: 'receipt-text-outline',
-    to: { pathname: '/(tabs)/katalog', params: { type: 'postpaid' } },
-  },
-  {
-    key: 'orders',
-    label: 'Pesanan',
-    icon: 'receipt-text-outline',
-    to: { pathname: '/(tabs)/pesanan' },
-  },
-  { key: 'support', label: 'Bantuan', icon: 'whatsapp', to: { pathname: '/bantuan' } },
-];
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -62,12 +33,13 @@ export default function HomeScreen() {
   const homeQuery = useHome();
   const configQuery = useAppConfig();
 
+  useDoubleBackToExit();
+
   const [infoVisible, setInfoVisible] = useState(false);
 
   const profile = meQuery.data ?? user;
   const home = homeQuery.data;
   const settings = home?.settings;
-  const site = normalizeSiteContent(settings?.site_content);
   const billsEnabled = configQuery.data?.features?.bills !== false;
   const categories = home?.prepaid_categories?.length
     ? home.prepaid_categories
@@ -115,8 +87,7 @@ export default function HomeScreen() {
   if (homeQuery.isPending) {
     return (
       <ScreenScroll>
-        <HomeTopBar name={profile?.display_name} />
-        <LoadingState label="Menyiapkan beranda…" />
+        <HomeSkeleton />
       </ScreenScroll>
     );
   }
@@ -124,7 +95,10 @@ export default function HomeScreen() {
   if (homeQuery.isError && !homeQuery.data) {
     return (
       <ScreenScroll>
-        <HomeTopBar name={profile?.display_name} />
+        <HomeTopBar
+          onNotification={() => setInfoVisible(true)}
+          onChat={() => router.push('/bantuan')}
+        />
         <ErrorState
           error={homeQuery.error}
           title="Beranda belum bisa dimuat"
@@ -137,15 +111,15 @@ export default function HomeScreen() {
   return (
     <>
       <ScreenScroll refreshing={refreshing} onRefresh={refresh}>
-        <HomeTopBar name={profile?.display_name} />
+        <HomeTopBar
+          onNotification={() => setInfoVisible(true)}
+          onChat={() => router.push('/bantuan')}
+          hasNotification={Boolean(settings?.info_modal_text)}
+        />
 
         <View style={styles.greeting}>
-          <AppText variant="labelSmall" color={colors.coralDark}>
-            HALO, {firstName(profile?.display_name).toUpperCase()}
-          </AppText>
-          <AppText variant="headlineLarge">{site.heroTitle}</AppText>
-          <AppText variant="bodyMedium" color={colors.muted}>
-            {site.heroSubtitle}
+          <AppText variant="headlineSmall" style={styles.greetingTitle}>
+            Halo, {firstName(profile?.display_name) || 'Pengguna'}
           </AppText>
         </View>
 
@@ -167,33 +141,6 @@ export default function HomeScreen() {
           onTopup={() => router.push('/topup')}
           onHistory={() => router.push('/saldo/riwayat')}
         />
-
-        <View style={styles.quickRow}>
-          {QUICK_ACTIONS.filter(
-            (action) => billsEnabled || action.key !== 'bills',
-          ).map((action) => (
-            <Pressable
-              key={action.key}
-              onPress={() => router.push(action.to)}
-              accessibilityRole="button"
-              style={({ pressed }) => [
-                styles.quickCard,
-                pressed && styles.pressed,
-              ]}
-            >
-              <View style={styles.quickIcon}>
-                <MaterialCommunityIcons
-                  name={action.icon}
-                  size={21}
-                  color={colors.coralDark}
-                />
-              </View>
-              <AppText variant="labelMedium" color={colors.ink}>
-                {action.label}
-              </AppText>
-            </Pressable>
-          ))}
-        </View>
 
         {categories.length ? (
           <View style={styles.section}>
@@ -388,26 +335,54 @@ export default function HomeScreen() {
   );
 }
 
-function HomeTopBar({ name }: { name?: string | null }) {
+function HomeTopBar({
+  onNotification,
+  onChat,
+  hasNotification,
+}: {
+  onNotification?: () => void;
+  onChat?: () => void;
+  hasNotification?: boolean;
+}) {
   return (
     <View style={styles.topBar}>
-      <AppLogo size={38} />
-      <View style={styles.brand}>
-        <AppText variant="labelSmall" style={styles.brandName}>
-          NOXARIANET
-        </AppText>
-        <AppText variant="bodySmall" color={colors.muted} style={styles.brandSub}>
-          STORE
-        </AppText>
+      <View style={styles.topBarLeft}>
+        <AppLogo size={32} />
+        <View style={styles.brand}>
+          <AppText variant="titleMedium" style={styles.brandName} numberOfLines={1}>
+            NOXARIANET
+          </AppText>
+        </View>
       </View>
-      <Pressable
-        onPress={() => router.push('/(tabs)/akun')}
-        style={({ pressed }) => [styles.avatarButton, pressed && styles.pressed]}
-        accessibilityRole="button"
-        accessibilityLabel="Buka akun"
-      >
-        <Avatar name={name} size={38} />
-      </Pressable>
+
+      <View style={styles.topBarActions}>
+        <Pressable
+          onPress={onChat}
+          accessibilityRole="button"
+          accessibilityLabel="Bantuan CS"
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons
+            name="chat-processing-outline"
+            size={18}
+            color={colors.ink}
+          />
+        </Pressable>
+
+        <Pressable
+          onPress={onNotification}
+          accessibilityRole="button"
+          accessibilityLabel="Notifikasi"
+          style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
+        >
+          <MaterialCommunityIcons
+            name="bell-outline"
+            size={18}
+            color={colors.ink}
+          />
+          {hasNotification ? <View style={styles.actionDot} /> : null}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -461,15 +436,15 @@ function CategoryCard({
         <RemoteArtwork
           uri={category.icon}
           label={category.name}
-          size={34}
+          size={24}
           cornerRadius={0}
           style={styles.categoryImage}
         />
       </View>
-      <AppText variant="titleSmall" numberOfLines={2} style={styles.categoryName}>
+      <AppText variant="labelMedium" numberOfLines={2} style={styles.categoryName}>
         {category.name}
       </AppText>
-      <AppText variant="bodySmall" color={colors.muted}>
+      <AppText variant="labelSmall" color={colors.muted} style={styles.categoryCount}>
         {category.product_count} produk
       </AppText>
     </Pressable>
@@ -480,53 +455,70 @@ const styles = StyleSheet.create({
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
-    paddingTop: spacing.sm,
+    justifyContent: 'space-between',
+    paddingTop: spacing.base + 2,
+    paddingBottom: spacing.xs,
+  },
+  topBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flex: 1,
+    minWidth: 0,
+    marginRight: spacing.sm,
   },
   brand: {
-    flex: 1,
+    flexShrink: 1,
+    minWidth: 0,
+    justifyContent: 'center',
   },
   brandName: {
-    letterSpacing: 2.2,
-    fontFamily: fonts.monoMedium,
+    letterSpacing: 0.8,
+    fontFamily: fonts.extraBold,
+    fontSize: 16,
+    color: colors.ink,
   },
-  brandSub: {
-    letterSpacing: 4.2,
-    fontFamily: fonts.mono,
-    marginTop: -2,
+  topBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexShrink: 0,
+  },
+  actionBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  actionDot: {
+    position: 'absolute',
+    top: 5,
+    right: 5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: colors.danger,
   },
   avatarButton: {
     padding: 2,
   },
   greeting: {
-    marginTop: spacing.lg,
-    gap: spacing.xs,
+    marginTop: spacing.base,
+    marginBottom: spacing.xs,
+  },
+  greetingTitle: {
+    fontFamily: fonts.extraBold,
+    fontSize: 22,
+    lineHeight: 28,
+    color: colors.ink,
   },
   banner: {
     marginTop: spacing.base,
-  },
-  quickRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginTop: spacing.md,
-  },
-  quickCard: {
-    flex: 1,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-    gap: 6,
-  },
-  quickIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.pill,
-    backgroundColor: colors.coralSoft,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   pressed: {
     opacity: 0.7,
@@ -540,46 +532,54 @@ const styles = StyleSheet.create({
     paddingRight: spacing.base,
   },
   categoryCard: {
-    width: 108,
-    minHeight: 132,
+    width: 92,
+    minHeight: 112,
     backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: radius.sm,
-    padding: spacing.md,
-    gap: spacing.xs,
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
+    gap: 3,
+    alignItems: 'center',
   },
   categoryIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.sm,
+    width: 38,
+    height: 38,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    marginBottom: 2,
   },
   categoryImage: {
-    width: 34,
-    height: 34,
+    width: 24,
+    height: 24,
   },
   categoryName: {
-    minHeight: 36,
+    fontFamily: fonts.semiBold,
+    fontSize: 12,
+    textAlign: 'center',
+    minHeight: 32,
+  },
+  categoryCount: {
+    fontSize: 10,
+    textAlign: 'center',
   },
   billCard: {
-    width: 168,
+    width: 148,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.tealSoft,
     borderWidth: 1,
     borderColor: '#C4E2D8',
-    borderRadius: radius.sm,
-    padding: spacing.md,
+    borderRadius: radius.md,
+    padding: spacing.sm + 2,
   },
   billIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
@@ -627,13 +627,17 @@ const styles = StyleSheet.create({
     padding: spacing.base,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: spacing.md,
   },
   supportCopy: {
     flex: 1,
+    minWidth: 160,
     gap: 2,
   },
   supportButton: {
+    flexShrink: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,

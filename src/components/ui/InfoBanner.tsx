@@ -106,9 +106,11 @@ const styles = StyleSheet.create({
   },
   icon: {
     marginTop: 1,
+    flexShrink: 0,
   },
   copy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   message: {

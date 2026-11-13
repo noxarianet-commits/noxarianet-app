@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { cancelOrder, getOrder } from '@/api/mobile';
@@ -17,11 +17,20 @@ import { ScreenScroll } from '@/components/ui/Screen';
 import { StatusPill } from '@/components/ui/StatusPill';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
+import { useHardwareBackPress } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
 import { formatDateTime, formatLongDate, formatRupiah } from '@/lib/format';
-import { colors, isFinalOrderStatus, spacing } from '@/theme/tokens';
+import { notifyOrderFailed, notifyOrderSuccess } from '@/lib/notifications';
+import { colors, isFinalOrderStatus, radius, spacing } from '@/theme/tokens';
 
-const STATUS_MESSAGES: Record<string, { tone: 'info' | 'warning' | 'danger' | 'success'; title: string; message: string }> = {
+const STATUS_MESSAGES: Record<
+  string,
+  {
+    tone: 'info' | 'warning' | 'danger' | 'success';
+    title: string;
+    message: string;
+  }
+> = {
   PENDING: {
     tone: 'warning',
     title: 'Menunggu pembayaran',
@@ -75,6 +84,20 @@ export default function OrderDetailScreen() {
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const notifiedOrderStatusRef = useRef<string | null>(null);
+
+  useHardwareBackPress(() => {
+    if (cancelVisible) {
+      setCancelVisible(false);
+      return true;
+    }
+    if (router.canGoBack()) {
+      router.back();
+    } else {
+      router.replace('/(tabs)/pesanan');
+    }
+    return true;
+  });
 
   const orderQuery = useQuery({
     queryKey: queryKeys.order(orderId),
@@ -82,7 +105,7 @@ export default function OrderDetailScreen() {
     select: (response) => response.data,
     enabled: !!orderId,
     refetchInterval: (query) => {
-      const status = query.state.data?.data?.status;
+      const status = query.state.data?.status;
       if (status && isFinalOrderStatus(status)) return false;
       return 20000;
     },
@@ -94,8 +117,6 @@ export default function OrderDetailScreen() {
   const statusInfo = status ? STATUS_MESSAGES[status] : undefined;
   const isPostpaid = order?.order_type === 'postpaid' || details.type === 'postpaid';
   const paidWithBalance = order?.payment_type === 'balance';
-  // Order tagihan lunas dari saldo: PENDING berarti vendor masih memproses,
-  // bukan "menunggu pembayaran".
   const awaitingPayment = status === 'PENDING' && !paidWithBalance;
   const target =
     details.customer_number ||
@@ -108,11 +129,19 @@ export default function OrderDetailScreen() {
 
   useEffect(() => {
     if (status && isFinalOrderStatus(status)) {
+      if (notifiedOrderStatusRef.current !== status) {
+        notifiedOrderStatusRef.current = status;
+        if (status === 'COMPLETED') {
+          notifyOrderSuccess(order?.product || 'Pesanan', order?.variant);
+        } else if (status === 'FAILED' || status === 'CANCELLED') {
+          notifyOrderFailed(order?.product || 'Pesanan', order?.variant);
+        }
+      }
       void queryClient.invalidateQueries({ queryKey: ['balance'] });
       void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
     }
-  }, [queryClient, status]);
+  }, [order?.product, order?.variant, queryClient, status]);
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -153,10 +182,19 @@ export default function OrderDetailScreen() {
     setTimeout(() => setCopied(false), 1800);
   };
 
+  const copySerial = async (value: string) => {
+    await Clipboard.setStringAsync(value);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1800);
+  };
+
   if (!orderId) {
     return (
       <ScreenScroll>
-        <AppHeader title="Detail pesanan" />
+        <AppHeader
+          title="Detail pesanan"
+          onBack={() => router.replace('/(tabs)/pesanan')}
+        />
         <ErrorState
           error={new Error('Nomor pesanan tidak ditemukan.')}
           title="Pesanan tidak valid"
@@ -170,7 +208,11 @@ export default function OrderDetailScreen() {
   if (orderQuery.isPending) {
     return (
       <ScreenScroll>
-        <AppHeader title="Detail pesanan" subtitle={orderId} />
+        <AppHeader
+          title="Detail pesanan"
+          subtitle={orderId}
+          onBack={() => router.replace('/(tabs)/pesanan')}
+        />
         <LoadingState label="Memuat pesanan…" />
       </ScreenScroll>
     );
@@ -179,7 +221,11 @@ export default function OrderDetailScreen() {
   if (!order) {
     return (
       <ScreenScroll>
-        <AppHeader title="Detail pesanan" subtitle={orderId} />
+        <AppHeader
+          title="Detail pesanan"
+          subtitle={orderId}
+          onBack={() => router.replace('/(tabs)/pesanan')}
+        />
         <ErrorState
           error={orderQuery.error}
           title="Pesanan tidak ditemukan"
@@ -190,282 +236,177 @@ export default function OrderDetailScreen() {
   }
 
   return (
-    <>
-      <ScreenScroll
-        refreshing={orderQuery.isRefetching && !refreshing}
-        onRefresh={() => void orderQuery.refetch()}
-      >
-        <AppHeader
-          title="Detail pesanan"
-          subtitle={formatLongDate(order.timestamp)}
-          right={
-            <TextButton
-              compact
-              onPress={() => void copyOrderId()}
-              icon="content-copy"
-            >
-              {copied ? 'Disalin' : 'Salin'}
-            </TextButton>
-          }
+    <ScreenScroll>
+      <AppHeader
+        title="Detail pesanan"
+        subtitle={orderId}
+        onBack={() => {
+          if (router.canGoBack()) router.back();
+          else router.replace('/(tabs)/pesanan');
+        }}
+      />
+
+      {statusInfo ? (
+        <InfoBanner
+          tone={statusInfo.tone}
+          title={statusInfo.title}
+          message={statusInfo.message}
+          style={styles.banner}
         />
+      ) : null}
 
-        <View style={styles.hero}>
-          <View style={styles.heroRow}>
-            <StatusPill status={status} />
-            <AppText variant="labelSmall" color={colors.muted}>
-              {formatDateTime(order.timestamp)}
-            </AppText>
-          </View>
-          <AppText variant="headlineMedium" numberOfLines={2}>
-            {order.product}
-          </AppText>
-          <AppText variant="bodyMedium" color={colors.muted}>
-            {order.variant}
-          </AppText>
-        </View>
+      {refreshError ? (
+        <InfoBanner
+          tone="danger"
+          title="Gagal memperbarui"
+          message={refreshError}
+          style={styles.banner}
+        />
+      ) : null}
 
-        {statusInfo ? (
-          <InfoBanner
-            tone={statusInfo.tone}
-            title={
-              paidWithBalance && status === 'PENDING'
-                ? 'Sedang diproses'
-                : statusInfo.title
-            }
-            message={
-              paidWithBalance && status === 'PENDING'
-                ? 'Saldo sudah dipotong. Vendor sedang memproses tagihanmu, halaman ini diperbarui berkala.'
-                : order.error_message || statusInfo.message
-            }
-          />
-        ) : null}
-
-        {refreshError ? (
-          <InfoBanner
-            tone="warning"
-            title="Status belum terbarui"
-            message={refreshError}
-            style={styles.banner}
-          />
-        ) : null}
-
-        {awaitingPayment ? (
-          <View style={styles.pendingActions}>
-            <PrimaryButton
-              onPress={() =>
-                router.push({
-                  pathname: '/pembayaran/[orderId]',
-                  params: { orderId },
-                })
-              }
-              icon="qrcode-scan"
-            >
-              Lanjutkan pembayaran
-            </PrimaryButton>
-            <SecondaryButton
-              onPress={() => {
-                setCancelError(null);
-                setCancelVisible(true);
-              }}
-            >
-              Batalkan pesanan
-            </SecondaryButton>
-          </View>
-        ) : null}
-
-        <SurfaceCard style={styles.card}>
-          <AppText variant="labelSmall" color={colors.muted} style={styles.eyebrow}>
-            RINCIAN TRANSAKSI
-          </AppText>
-          <ReceiptRow label="Nomor pesanan" value={order.id} mono />
-          <ReceiptRow
-            label="Metode bayar"
-            value={order.payment_type !== 'balance' ? 'QRIS' : 'Saldo'}
-          />
-          <ReceiptRow label="Harga" value={formatRupiah(order.price)} />
-          {order.pg_total && order.pg_total !== order.price ? (
-            <ReceiptRow label="Total bayar" value={formatRupiah(order.pg_total)} />
-          ) : null}
-          {order.pg_paid_at ? (
-            <ReceiptRow label="Dibayar" value={formatDateTime(order.pg_paid_at)} />
-          ) : null}
-          {order.pg_expired_at && order.status === 'PENDING' ? (
-            <ReceiptRow
-              label="Kedaluwarsa"
-              value={formatDateTime(order.pg_expired_at)}
-            />
-          ) : null}
-          {order.pg_invoice ? (
-            <ReceiptRow label="Invoice" value={order.pg_invoice} mono />
-          ) : null}
-          <View style={styles.divider} />
-          <ReceiptRow
-            label="Total"
-            value={formatRupiah(order.pg_total ?? order.total ?? order.price)}
-            strong
-            valueColor={colors.coralDark}
-          />
-        </SurfaceCard>
-
-        <SurfaceCard style={styles.card}>
-          <AppText variant="labelSmall" color={colors.muted} style={styles.eyebrow}>
-            DATA TUJUAN
-          </AppText>
-          {target ? (
-            <ReceiptRow
-              label={isPostpaid ? 'Nomor pelanggan' : 'ID / nomor tujuan'}
-              value={String(target)}
-              mono
-            />
-          ) : null}
-          {details.zone_id ? (
-            <ReceiptRow label="Zone / Server" value={String(details.zone_id)} mono />
-          ) : null}
-          {details.provider_qty ? (
-            <ReceiptRow
-              label="Nominal"
-              value={formatRupiah(Number(details.provider_qty))}
-            />
-          ) : null}
-          {isPostpaid && details.customer_name ? (
-            <ReceiptRow label="Nama pelanggan" value={String(details.customer_name)} />
-          ) : null}
-          {isPostpaid && details.bill_period ? (
-            <ReceiptRow label="Periode" value={String(details.bill_period)} />
-          ) : null}
-          {isPostpaid && details.bill_amount ? (
-            <ReceiptRow
-              label="Tagihan"
-              value={formatRupiah(Number(details.bill_amount))}
-            />
-          ) : null}
-          {isPostpaid && details.admin_fee ? (
-            <ReceiptRow
-              label="Biaya layanan"
-              value={formatRupiah(Number(details.admin_fee))}
-            />
-          ) : null}
-          {!target && !details.zone_id ? (
+      <SurfaceCard style={styles.card}>
+        <View style={styles.cardHead}>
+          <View style={styles.cardHeadLeft}>
+            <AppText variant="titleMedium">{order.product}</AppText>
             <AppText variant="bodySmall" color={colors.muted}>
-              Detail tujuan tidak tersedia.
+              {order.variant}
             </AppText>
-          ) : null}
-        </SurfaceCard>
+          </View>
+          <StatusPill status={order.status} />
+        </View>
 
-        {serial || licenses.length ? (
-          <SurfaceCard style={styles.card}>
-            <AppText variant="labelSmall" color={colors.muted} style={styles.eyebrow}>
-              HASIL TRANSAKSI
-            </AppText>
-            {serial ? (
-              <ReceiptRow label="Serial number" value={String(serial)} mono />
-            ) : null}
-            {licenses.map((license, index) => (
-              <ReceiptRow
-                key={`${license}-${index}`}
-                label={`Lisensi ${index + 1}`}
-                value={String(license)}
-                mono
-              />
-            ))}
-            {details.completed_at ? (
-              <ReceiptRow
-                label="Selesai pada"
-                value={formatDateTime(String(details.completed_at))}
-              />
-            ) : null}
-          </SurfaceCard>
+        <ReceiptRow label="Nomor Pesanan" value={order.id} copyable onCopy={copyOrderId} />
+        {target ? <ReceiptRow label="Tujuan" value={String(target)} copyable /> : null}
+        {isPostpaid && details.customer_name ? (
+          <ReceiptRow label="Nama Pelanggan" value={String(details.customer_name)} />
+        ) : null}
+        {isPostpaid && details.bill_period ? (
+          <ReceiptRow label="Periode" value={String(details.bill_period)} />
+        ) : null}
+        <ReceiptRow
+          label="Metode Bayar"
+          value={paidWithBalance ? 'Saldo Akun' : order.payment_type?.toUpperCase() || 'Gateway'}
+        />
+        <ReceiptRow label="Harga" value={formatRupiah(order.price)} />
+        {order.fee ? <ReceiptRow label="Biaya Admin" value={formatRupiah(order.fee)} /> : null}
+        <ReceiptRow
+          label="Total Bayar"
+          value={formatRupiah(order.total ?? order.price)}
+          highlight
+        />
+        <ReceiptRow
+          label="Waktu Pemesanan"
+          value={order.created_at ? formatDateTime(order.created_at) : '-'}
+        />
+      </SurfaceCard>
+
+      {serial ? (
+        <SurfaceCard style={styles.card}>
+          <AppText variant="titleSmall" style={styles.sectionTitle}>
+            SN / Serial Number / Bukti
+          </AppText>
+          <ReceiptRow
+            label="Serial Number"
+            value={String(serial)}
+            copyable
+            onCopy={() => void copySerial(String(serial))}
+            highlight
+          />
+        </SurfaceCard>
+      ) : null}
+
+      {licenses.length > 0 ? (
+        <SurfaceCard style={styles.card}>
+          <AppText variant="titleSmall" style={styles.sectionTitle}>
+            Kode Voucher / Lisensi
+          </AppText>
+          {licenses.map((lic, idx) => (
+            <ReceiptRow
+              key={idx}
+              label={`Kode ${idx + 1}`}
+              value={lic}
+              copyable
+              onCopy={() => void copySerial(lic)}
+              highlight
+            />
+          ))}
+        </SurfaceCard>
+      ) : null}
+
+      <View style={styles.actions}>
+        {awaitingPayment ? (
+          <PrimaryButton
+            onPress={() =>
+              router.push({
+                pathname: '/pembayaran/[orderId]',
+                params: { orderId: order.id },
+              })
+            }
+          >
+            Lanjutkan Pembayaran
+          </PrimaryButton>
         ) : null}
 
-        <View style={styles.actions}>
-          {!isFinalOrderStatus(status) ? (
-            <SecondaryButton
-              onPress={() => void handleRefresh()}
-              loading={refreshing}
-              icon="refresh"
-            >
-              Perbarui status
-            </SecondaryButton>
-          ) : null}
+        {order.status === 'PENDING' ? (
           <SecondaryButton
-            onPress={() => router.push('/(tabs)/katalog')}
-            icon="storefront-outline"
+            onPress={() => setCancelVisible(true)}
+            loading={cancelling}
+            disabled={cancelling}
           >
-            Belanja lagi
+            Batalkan Pesanan
           </SecondaryButton>
-        </View>
+        ) : null}
 
-        <View style={styles.helpRow}>
-          <MaterialCommunityIcons
-            name="shield-check-outline"
-            size={15}
-            color={colors.muted}
-          />
-          <AppText variant="bodySmall" color={colors.muted}>
-            Simpan nomor pesanan untuk keperluan bantuan.
-          </AppText>
-        </View>
-      </ScreenScroll>
+        {!isFinalOrderStatus(order.status) ? (
+          <TextButton
+            onPress={() => void handleRefresh()}
+            loading={refreshing}
+            disabled={refreshing}
+          >
+            Perbarui Status Sekarang
+          </TextButton>
+        ) : null}
+      </View>
 
       <ConfirmDialog
         visible={cancelVisible}
-        title="Batalkan pesanan?"
-        message={
-          cancelError ||
-          'Pesanan hanya bisa dibatalkan selama masih menunggu pembayaran. Saldo akan dikembalikan otomatis.'
-        }
-        confirmLabel="Batalkan"
-        destructive
-        loading={cancelling}
+        title="Batalkan Pesanan?"
+        message="Apakah kamu yakin ingin membatalkan pesanan ini? Pesanan yang dibatalkan tidak dapat diproses kembali."
+        confirmLabel="Ya, Batalkan"
+        cancelLabel="Kembali"
         onConfirm={() => void handleCancel()}
-        onDismiss={() => {
-          if (!cancelling) setCancelVisible(false);
-        }}
+        onCancel={() => setCancelVisible(false)}
+        loading={cancelling}
       />
-    </>
+    </ScreenScroll>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: {
-    gap: spacing.xs,
-    marginTop: spacing.xs,
-  },
-  heroRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: spacing.sm,
-    marginBottom: spacing.xs,
-  },
-  pendingActions: {
-    gap: spacing.sm,
-    marginTop: spacing.base,
-  },
   banner: {
-    marginTop: spacing.base,
+    marginBottom: spacing.md,
   },
   card: {
-    marginTop: spacing.base,
+    marginBottom: spacing.md,
   },
-  eyebrow: {
-    letterSpacing: 1.2,
-    marginBottom: spacing.xs,
-  },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: colors.line,
-    marginVertical: spacing.xs,
-  },
-  actions: {
-    marginTop: spacing.lg,
+  cardHead: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: spacing.md,
     gap: spacing.sm,
   },
-  helpRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    marginTop: spacing.base,
+  cardHeadLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  sectionTitle: {
+    marginBottom: spacing.sm,
+  },
+  actions: {
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xl,
   },
 });
+

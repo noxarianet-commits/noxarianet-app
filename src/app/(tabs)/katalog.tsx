@@ -13,6 +13,7 @@ import type { Product } from '@/api/types';
 import { ProductCard } from '@/components/product/ProductCard';
 import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
+import { CatalogGridSkeleton } from '@/components/ui/Skeleton';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { FilterChips, UnderlineTabs } from '@/components/ui/Tabs';
 import { TextField } from '@/components/ui/TextField';
@@ -21,7 +22,7 @@ import { useAppConfig } from '@/hooks/useAppConfig';
 import { useHome } from '@/hooks/useHome';
 import { useProducts, type CatalogType } from '@/hooks/useProducts';
 import { mergeProductRows } from '@/lib/products';
-import { colors, fonts, layout, spacing } from '@/theme/tokens';
+import { colors, fonts, layout, radius, spacing } from '@/theme/tokens';
 
 const TYPE_TABS = [
   { key: 'prepaid', label: 'Prepaid' },
@@ -131,7 +132,7 @@ export default function CatalogScreen() {
                     ? 'KATALOG TAGIHAN'
                     : 'KATALOG PREPAID'}
                 </AppText>
-                <AppText variant="headlineLarge">
+                <AppText style={styles.titleText}>
                   {type === 'postpaid' ? 'Bayar tagihan' : 'Mau top up apa?'}
                 </AppText>
               </View>
@@ -149,30 +150,32 @@ export default function CatalogScreen() {
               style={styles.typeTabs}
             />
 
-            <TextField
-              placeholder={
-                type === 'postpaid'
-                  ? 'Cari listrik, air, BPJS, pajak…'
-                  : 'Cari game, pulsa, e-wallet…'
-              }
-              value={search}
-              onChangeText={setSearch}
-              autoCorrect={false}
-              autoCapitalize="none"
-              returnKeyType="search"
-              left={<TextInput.Icon icon="magnify" color={colors.muted} />}
-              right={
-                search ? (
-                  <TextInput.Icon
-                    icon="close-circle"
-                    color={colors.muted}
-                    forceTextInputFocus={false}
-                    onPress={() => setSearch('')}
-                    accessibilityLabel="Hapus pencarian"
-                  />
-                ) : undefined
-              }
-            />
+            <View style={styles.searchWrap}>
+              <TextField
+                placeholder={
+                  type === 'postpaid'
+                    ? 'Cari listrik, air, BPJS, pajak…'
+                    : 'Cari game, pulsa, e-wallet…'
+                }
+                value={search}
+                onChangeText={setSearch}
+                autoCorrect={false}
+                autoCapitalize="none"
+                returnKeyType="search"
+                left={<TextInput.Icon icon="magnify" color={colors.muted} />}
+                right={
+                  search ? (
+                    <TextInput.Icon
+                      icon="close-circle"
+                      color={colors.muted}
+                      forceTextInputFocus={false}
+                      onPress={() => setSearch('')}
+                      accessibilityLabel="Hapus pencarian"
+                    />
+                  ) : undefined
+                }
+              />
+            </View>
 
             <FilterChips
               items={categoryItems}
@@ -180,7 +183,8 @@ export default function CatalogScreen() {
               onChange={(key) =>
                 router.setParams({ category: key === 'ALL' ? undefined : key })
               }
-              style={styles.filters}
+              style={styles.filtersScroll}
+              contentContainerStyle={styles.filtersContent}
             />
 
             {products.length ? (
@@ -204,7 +208,7 @@ export default function CatalogScreen() {
         }
         ListEmptyComponent={
           productsQuery.isPending ? (
-            <LoadingState label="Memuat katalog…" />
+            <CatalogGridSkeleton />
           ) : productsQuery.isError ? (
             <ErrorState
               error={productsQuery.error}
@@ -249,42 +253,55 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   header: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.md,
-    gap: spacing.base,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.sm,
   },
   titleRow: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    gap: spacing.md,
+    gap: spacing.sm,
+    marginBottom: spacing.sm,
   },
   titleCopy: {
     flex: 1,
-    gap: spacing.xs,
+    minWidth: 0,
+    gap: 2,
+  },
+  titleText: {
+    fontFamily: fonts.bold,
+    fontSize: 24,
+    lineHeight: 30,
+    color: colors.ink,
   },
   countBadge: {
     borderWidth: 1,
     borderColor: colors.line,
     backgroundColor: colors.surface,
-    borderRadius: 999,
+    borderRadius: radius.pill,
     paddingHorizontal: 10,
     paddingVertical: 4,
-    marginBottom: 4,
+    flexShrink: 0,
   },
   typeTabs: {
-    marginTop: -spacing.xs,
-    gap: 20,
+    marginBottom: spacing.md,
   },
-  filters: {
-    marginTop: -spacing.xs,
+  searchWrap: {
+    marginBottom: spacing.md,
+  },
+  filtersScroll: {
+    marginHorizontal: -layout.screenPadding,
+    marginBottom: spacing.md,
+  },
+  filtersContent: {
+    paddingHorizontal: layout.screenPadding,
   },
   resultRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
-    marginTop: -spacing.xs,
+    marginBottom: spacing.xs,
   },
   column: {
     gap: spacing.sm,

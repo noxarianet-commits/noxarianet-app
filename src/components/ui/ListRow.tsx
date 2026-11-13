@@ -88,9 +88,11 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   copy: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   title: {

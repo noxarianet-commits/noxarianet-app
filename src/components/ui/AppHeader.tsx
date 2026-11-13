@@ -72,9 +72,11 @@ const styles = StyleSheet.create({
   },
   back: {
     margin: 0,
+    flexShrink: 0,
   },
   titleWrap: {
     flex: 1,
+    minWidth: 0,
     paddingLeft: 4,
     paddingVertical: 8,
   },
@@ -82,5 +84,6 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flexDirection: 'row',
     alignItems: 'center',
+    flexShrink: 0,
   },
 });

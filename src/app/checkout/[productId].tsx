@@ -534,7 +534,11 @@ function CheckoutForm({
             <AppText variant="labelSmall" color={colors.muted}>
               TOTAL BAYAR
             </AppText>
-            <AppText style={styles.footerPrice}>
+            <AppText
+              style={styles.footerPrice}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+            >
               {openDenom && !qty ? 'Isi nominal' : formatRupiah(total)}
             </AppText>
           </View>
@@ -635,6 +639,7 @@ const styles = StyleSheet.create({
   },
   productCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   priceTag: {
@@ -646,6 +651,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
+    flexShrink: 0,
   },
   priceTagValue: {
     fontFamily: fonts.monoMedium,
@@ -696,11 +702,13 @@ const styles = StyleSheet.create({
   },
   paymentCopy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   paymentTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
     gap: spacing.sm,
   },
   paymentBadge: {
@@ -717,6 +725,7 @@ const styles = StyleSheet.create({
     borderColor: colors.lineStrong,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
   },
   radioSelected: {
     borderColor: colors.coralDark,
@@ -738,6 +747,7 @@ const styles = StyleSheet.create({
   },
   footerTotal: {
     flex: 1,
+    minWidth: 0,
     gap: 1,
   },
   footerPrice: {
@@ -746,5 +756,6 @@ const styles = StyleSheet.create({
   },
   submit: {
     minWidth: 150,
+    flexShrink: 0,
   },
 });

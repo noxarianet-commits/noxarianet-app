@@ -79,7 +79,7 @@ export default function OrdersScreen() {
                 </AppText>
                 <AppText variant="headlineLarge">Pesanan kamu</AppText>
               </View>
-              <AppText variant="labelSmall" color={colors.muted}>
+              <AppText variant="labelSmall" color={colors.muted} style={styles.totalBadge}>
                 {ordersQuery.data?.pages[0]?.meta.total ?? 0} TOTAL
               </AppText>
             </View>
@@ -92,6 +92,8 @@ export default function OrdersScreen() {
               items={orderStatusFilters}
               value={status}
               onChange={setStatus}
+              style={styles.filtersScroll}
+              contentContainerStyle={styles.filtersContent}
             />
           </View>
         }
@@ -166,7 +168,17 @@ const styles = StyleSheet.create({
   },
   titleCopy: {
     flex: 1,
+    minWidth: 0,
     gap: spacing.xs,
+  },
+  totalBadge: {
+    flexShrink: 0,
+  },
+  filtersScroll: {
+    marginHorizontal: -layout.screenPadding,
+  },
+  filtersContent: {
+    paddingHorizontal: layout.screenPadding,
   },
   footer: {
     paddingVertical: spacing.lg,

@@ -42,13 +42,10 @@ export function AuthShell({
         ) : null}
 
         <View style={styles.brand}>
-          <AppLogo size={42} />
-          <View>
-            <AppText variant="labelSmall" color={colors.ink} style={styles.brandName}>
+          <AppLogo size={34} />
+          <View style={styles.brandCopy}>
+            <AppText variant="titleMedium" color={colors.ink} style={styles.brandName}>
               NOXARIANET
-            </AppText>
-            <AppText variant="bodySmall" color={colors.muted} style={styles.brandSub}>
-              STORE
             </AppText>
           </View>
         </View>
@@ -85,16 +82,18 @@ const styles = StyleSheet.create({
   brand: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: 6,
+  },
+  brandCopy: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'center',
   },
   brandName: {
-    letterSpacing: 2.2,
-    fontFamily: fonts.monoMedium,
-  },
-  brandSub: {
-    letterSpacing: 4.4,
-    fontFamily: fonts.mono,
-    marginTop: -1,
+    letterSpacing: 0.8,
+    fontFamily: fonts.extraBold,
+    fontSize: 16,
+    color: colors.ink,
   },
   heading: {
     marginTop: spacing.xxl,

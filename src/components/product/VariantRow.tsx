@@ -134,6 +134,7 @@ const styles = StyleSheet.create({
   },
   copy: {
     flex: 1,
+    minWidth: 0,
     gap: 2,
   },
   meta: {
@@ -143,5 +144,6 @@ const styles = StyleSheet.create({
     fontFamily: fonts.monoMedium,
     fontSize: 13,
     textAlign: 'right',
+    flexShrink: 0,
   },
 });

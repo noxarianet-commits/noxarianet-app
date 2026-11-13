@@ -25,7 +25,7 @@ export function PrimaryButton({
       mode="contained"
       {...rest}
       buttonColor={rest.buttonColor ?? colors.coralDark}
-      textColor={rest.textColor ?? '#FFF8F3'}
+      textColor={rest.textColor ?? '#FFFFFF'}
       style={[
         styles.base,
         fullWidth ? styles.fullWidth : null,

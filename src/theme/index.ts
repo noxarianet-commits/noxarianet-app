@@ -123,7 +123,7 @@ export const paperTheme: MD3Theme = {
   },
   colors: {
     primary: colors.coralDark,
-    onPrimary: '#FFF8F3',
+    onPrimary: '#FFFFFF',
     primaryContainer: colors.coralSoft,
     onPrimaryContainer: colors.coralInk,
     secondary: colors.teal,
