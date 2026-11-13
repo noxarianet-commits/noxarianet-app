@@ -79,6 +79,33 @@ export type MessageResponse = {
   message: string;
 };
 
+// ── Push notification devices ──────────────────────────────────────────────
+
+export type RegisterDevicePayload = {
+  push_token: string;
+  platform?: 'android' | 'ios' | 'web';
+  app_version?: string;
+};
+
+export type RegisterDeviceResponse = {
+  success: true;
+  data: { registered: boolean };
+};
+
+export type DeviceListResponse = {
+  success: true;
+  data: { devices: DeviceInfo[] };
+};
+
+export type DeviceInfo = {
+  id: string;
+  platform: string;
+  app_version: string | null;
+  active: boolean;
+  last_seen_at: string;
+  created_at: string;
+};
+
 export type HomeCategory = {
   slug: string;
   name: string;

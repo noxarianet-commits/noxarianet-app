@@ -24,6 +24,7 @@ import {
 } from '@/components/system/SystemScreens';
 import { NotificationBar } from '@/components/ui/NotificationBar';
 import { useAppConfig } from '@/hooks/useAppConfig';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { initNotifications } from '@/lib/notifications';
 import { isVersionBelow } from '@/lib/version';
 import { queryClient } from '@/query/queryClient';
@@ -115,6 +116,10 @@ function BootstrapGate() {
 
 function RootNavigator() {
   const { session } = useAuth();
+
+  // Plumbung push notification: daftarkan token saat login, buka layar
+  // terkait saat notifikasi disadap.
+  usePushNotifications();
 
   return (
     <Stack

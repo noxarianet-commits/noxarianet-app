@@ -19,6 +19,7 @@
         "VIBRATE",
         "POST_NOTIFICATIONS"
       ],
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#4D1B8C",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -42,7 +43,7 @@
         {
           "icon": "./assets/images/android-icon-monochrome.png",
           "color": "#4D1B8C",
-          "defaultChannel": "noxarianet_pesan"
+          "defaultChannel": "noxarianet_transaksi"
         }
       ]
     ],
