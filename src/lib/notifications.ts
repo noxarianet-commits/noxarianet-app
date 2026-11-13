@@ -52,7 +52,15 @@ export async function initNotifications() {
         name: 'Status Transaksi & Saldo',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#E86B4F',
+        lightColor: '#4D1B8C',
+        sound: 'default',
+      });
+
+      await Notifications.setNotificationChannelAsync('noxarianet_pesan', {
+        name: 'Pesan & Informasi',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 200, 100, 200],
+        lightColor: '#4D1B8C',
         sound: 'default',
       });
     }
@@ -60,6 +68,37 @@ export async function initNotifications() {
     await Notifications.requestPermissionsAsync();
   } catch {
     // Graceful fallback if permission request fails or unsupported
+  }
+}
+
+/**
+ * Minta izin notifikasi secara eksplisit (dipanggil dari halaman Akun).
+ * Return `true` kalau granted, `false` kalau ditolak atau belum tersedia.
+ */
+export async function requestNotificationPermission(): Promise<boolean> {
+  if (!Notifications) return false;
+  try {
+    await initNotifications();
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    if (existing === 'granted') return true;
+
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === 'granted';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Cek apakah izin notifikasi sudah granted.
+ */
+export async function getNotificationPermissionStatus(): Promise<boolean> {
+  if (!Notifications) return false;
+  try {
+    const { status } = await Notifications.getPermissionsAsync();
+    return status === 'granted';
+  } catch {
+    return false;
   }
 }
 
@@ -157,5 +196,47 @@ export function notifyOrderFailed(productName: string, variantName?: string) {
     tone: 'danger',
     icon: 'alert-circle-outline',
   });
+}
+
+/**
+ * Kirim notifikasi pesan umum (channel: noxarianet_pesan).
+ * Muncul di system bar + in-app banner.
+ */
+export function notifyCustomMessage(title: string, body: string) {
+  const notification: AppNotification = {
+    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    title,
+    body,
+    tone: 'info',
+    icon: 'message-text-outline',
+    timestamp: Date.now(),
+  };
+
+  for (const listener of listeners) {
+    try {
+      listener(notification);
+    } catch {
+      // Ignore listener error
+    }
+  }
+
+  // Dispatch to system notification via "pesan" channel
+  if (!Notifications) return;
+  void (async () => {
+    try {
+      await initNotifications();
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title,
+          body,
+          sound: true,
+          ...(Platform.OS === 'android' ? { channelId: 'noxarianet_pesan' } : null),
+        },
+        trigger: null,
+      });
+    } catch {
+      // Ignore fallback errors
+    }
+  })();
 }
 
