@@ -123,7 +123,7 @@ export default function CatalogScreen() {
   const products = useMemo(
     () =>
       mergeProductRows(
-        productsQuery.data?.pages.flatMap((page) => page.data) ?? [],
+        productsQuery.data?.pages.flatMap((page) => page?.data ?? []) ?? [],
       ),
     [productsQuery.data],
   );
@@ -254,7 +254,15 @@ export default function CatalogScreen() {
           <AppText variant="labelSmall" color={colors.muted}>
             {category !== 'ALL'
               ? `${displayedProducts.length} PRODUK`
-              : `${productsQuery.data?.pages[0]?.meta.total ?? products.length} PRODUK`}
+              : `${
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (productsQuery.data?.pages[0] as any)?.meta?.total ??
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (productsQuery.data?.pages[0] as any)?.pagination?.total ??
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (productsQuery.data?.pages[0] as any)?.total ??
+                  products.length
+                } PRODUK`}
           </AppText>
         </View>
       </View>

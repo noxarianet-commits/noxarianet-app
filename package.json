@@ -12,7 +12,6 @@
     "expo-application": "~58.1.2",
     "expo-clipboard": "~58.0.4",
     "expo-constants": "~58.0.15",
-    "expo-device": "~58.0.5",
     "expo-font": "~58.0.11",
     "expo-image": "~58.0.18",
     "expo-linking": "~58.0.16",
@@ -43,6 +42,7 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
+    "web": "expo start --web",
     "lint": "expo lint",
     "typecheck": "tsc --noEmit"
   },

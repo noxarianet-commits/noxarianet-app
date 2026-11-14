@@ -4,7 +4,10 @@
     "slug": "noxarianet-store",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["android"],
+    "platforms": [
+      "android",
+      "web"
+    ],
     "icon": "./assets/images/icon.png",
     "scheme": "noxarianet",
     "userInterfaceStyle": "light",
@@ -21,7 +24,7 @@
       ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#4D1B8C",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
@@ -49,6 +52,10 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/icon.png"
     },
     "extra": {
       "router": {

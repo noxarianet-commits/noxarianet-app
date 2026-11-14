@@ -86,6 +86,42 @@ export function formatDateTime(value?: string | null) {
   return `${formatDate(value)}, ${formatTime(value)}`;
 }
 
+/**
+ * Format tanggal dan waktu lengkap untuk struk resmi (termasuk jam, menit, detik dan zona WIB).
+ */
+export function formatFullReceiptDateTime(value?: string | null) {
+  const date = parseDate(value);
+  if (!date) {
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, '0');
+    const month = MONTHS_LONG[now.getMonth()];
+    const year = now.getFullYear();
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${day} ${month} ${year}, ${hours}:${minutes}:${seconds} WIB`;
+  }
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = MONTHS_LONG[date.getMonth()];
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  const seconds = String(date.getSeconds()).padStart(2, '0');
+  return `${day} ${month} ${year}, ${hours}:${minutes}:${seconds} WIB`;
+}
+
+/**
+ * Normalisasi metode bayar: hanya ada 2 metode: "Saldo Noxarianet" atau "QRIS".
+ */
+export function formatReceiptPaymentMethod(type?: string | null): 'Saldo Noxarianet' | 'QRIS' {
+  if (!type) return 'Saldo Noxarianet';
+  const clean = String(type).trim().toLowerCase();
+  if (clean === 'balance' || clean.includes('saldo')) {
+    return 'Saldo Noxarianet';
+  }
+  return 'QRIS';
+}
+
 export function formatCountdown(ms: number) {
   if (!Number.isFinite(ms) || ms <= 0) return '00:00';
   const totalSeconds = Math.floor(ms / 1000);

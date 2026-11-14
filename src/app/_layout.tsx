@@ -11,10 +11,10 @@ import { useFonts } from 'expo-font';
 import { NavigationBar } from 'expo-navigation-bar';
 import { SplashScreen, Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { StyleSheet } from 'react-native';
+import { useEffect, useState } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { PaperProvider } from 'react-native-paper';
+import { ActivityIndicator, PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider, useAuth } from '@/auth/AuthProvider';
@@ -61,6 +61,7 @@ export default function RootLayout() {
 function BootstrapGate() {
   const { status } = useAuth();
   const configQuery = useAppConfig();
+  const [timedOut, setTimedOut] = useState(false);
   const [fontsLoaded, fontError] = useFonts({
     Manrope_400Regular,
     Manrope_500Medium,
@@ -71,16 +72,31 @@ function BootstrapGate() {
     DMMono_500Medium,
   });
 
+  // Safety fallback: jika font / auth lambat di Expo Go, paksa buka dalam 2 detik
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setTimedOut(true);
+      void SplashScreen.hideAsync().catch(() => {});
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
+
   const ready =
-    (fontsLoaded || !!fontError) && status !== 'loading';
+    timedOut || ((fontsLoaded || !!fontError) && status !== 'loading');
 
   useEffect(() => {
     if (ready) {
-      void SplashScreen.hideAsync();
+      void SplashScreen.hideAsync().catch(() => {});
     }
   }, [ready]);
 
-  if (!ready) return null;
+  if (!ready) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator color={colors.coralDark} size="large" />
+      </View>
+    );
+  }
 
   const config = configQuery.data;
 
@@ -158,6 +174,12 @@ function RootNavigator() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
+    backgroundColor: colors.paper,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.paper,
   },
 });

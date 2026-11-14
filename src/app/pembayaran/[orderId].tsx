@@ -91,12 +91,15 @@ export default function PaymentScreen() {
     order?.price ??
     0;
 
-  const notifiedOrderStatusRef = useRef<string | null>(null);
+  const previousStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status && isFinalOrderStatus(status)) {
-      if (notifiedOrderStatusRef.current !== status) {
-        notifiedOrderStatusRef.current = status;
+      // Hanya kirim notifikasi jika sebelumnya PENDING/PROCESSING dan baru saja selesai live
+      if (
+        previousStatusRef.current &&
+        !isFinalOrderStatus(previousStatusRef.current)
+      ) {
         if (status === 'COMPLETED') {
           notifyOrderSuccess(order?.product || 'Pesanan', order?.variant);
         } else if (status === 'FAILED' || status === 'CANCELLED') {
@@ -108,6 +111,7 @@ export default function PaymentScreen() {
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
       void queryClient.invalidateQueries({ queryKey: ['order', orderId] });
     }
+    previousStatusRef.current = status;
   }, [order?.product, order?.variant, orderId, queryClient, status]);
 
   const copyValue = async (label: string, value: string) => {

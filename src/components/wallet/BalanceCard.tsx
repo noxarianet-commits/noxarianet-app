@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { formatRupiah } from '@/lib/format';
@@ -14,11 +14,13 @@ export function BalanceCard({
   limit,
   onTopup,
   onHistory,
+  style,
 }: {
   balance: number;
   limit?: number;
   onTopup: () => void;
   onHistory: () => void;
+  style?: StyleProp<ViewStyle>;
 }) {
   const [visible, setVisible] = useState(true);
 
@@ -45,7 +47,7 @@ export function BalanceCard({
   };
 
   return (
-    <View style={styles.cardContainer}>
+    <View style={[styles.cardContainer, style]}>
       {/* Subtle clean ambient background glow */}
       <View style={styles.glowTopRight} />
       <View style={styles.glowBottomLeft} />

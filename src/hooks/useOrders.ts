@@ -9,10 +9,31 @@ export function useOrders(status: string) {
     queryFn: ({ pageParam }) =>
       getOrders({ page: pageParam, limit: 20, status }),
     initialPageParam: 1,
-    getNextPageParam: (lastPage) =>
-      lastPage.meta.page < lastPage.meta.total_pages
-        ? lastPage.meta.page + 1
-        : undefined,
-    staleTime: 20 * 1000,
+    getNextPageParam: (lastPage) => {
+      if (!lastPage) return undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const pageData = lastPage as any;
+      const meta = pageData.meta ?? pageData.pagination;
+
+      const currentPage =
+        meta?.page ??
+        meta?.current_page ??
+        pageData.page ??
+        pageData.current_page;
+
+      const totalPages =
+        meta?.total_pages ??
+        meta?.last_page ??
+        meta?.totalPages ??
+        pageData.total_pages ??
+        pageData.last_page;
+
+      if (typeof currentPage === 'number' && typeof totalPages === 'number') {
+        return currentPage < totalPages ? currentPage + 1 : undefined;
+      }
+      return undefined;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 }

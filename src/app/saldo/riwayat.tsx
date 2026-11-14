@@ -46,7 +46,7 @@ export default function BalanceHistoryScreen() {
   const historyQuery = useBalanceHistory(type);
 
   const items = useMemo(
-    () => historyQuery.data?.pages.flatMap((page) => page.data) ?? [],
+    () => historyQuery.data?.pages.flatMap((page) => page?.data ?? []) ?? [],
     [historyQuery.data],
   );
 
