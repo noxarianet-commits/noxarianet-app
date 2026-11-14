@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
@@ -22,10 +22,10 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useHardwareBackPress } from '@/hooks/useBackHandler';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isRateLimited } from '@/lib/errors';
 import { formatCountdown, formatRupiah } from '@/lib/format';
 import { notifyTopupSuccess } from '@/lib/notifications';
-import { pollDelay } from '@/lib/polling';
+import { pollDelay, RATE_LIMIT_POLL_DELAY } from '@/lib/polling';
 import { loadTopupInfo } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
@@ -33,6 +33,7 @@ export default function TopupDetailScreen() {
   const params = useLocalSearchParams<{ ref?: string }>();
   const ref = params.ref || '';
   const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
 
   const [cancelVisible, setCancelVisible] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -59,19 +60,29 @@ export default function TopupDetailScreen() {
     staleTime: Infinity,
     enabled: !!ref,
   });
+  const cache = cacheQuery.data;
 
   const statusQuery = useQuery({
     queryKey: queryKeys.topupStatus(ref),
     queryFn: () => getTopupStatus(ref),
-    enabled: !!ref,
+    enabled: !!ref && isFocused,
     refetchInterval: (query) => {
+      if (!isFocused) return false;
+      if (isRateLimited(query.state.error)) return RATE_LIMIT_POLL_DELAY;
+
+      const recordData = query.state.data?.data;
       const status = query.state.data?.status;
       if (status && status !== 'pending') return false;
+
+      const expiresAtValue = recordData?.pg_expired_at || cache?.expiresAt;
+      if (expiresAtValue && new Date(expiresAtValue).getTime() <= Date.now()) {
+        return false;
+      }
+
       return pollDelay(query.state.dataUpdateCount);
     },
   });
 
-  const cache = cacheQuery.data;
   const pendingQuery = useQuery({
     queryKey: queryKeys.topupPending,
     queryFn: getPendingTopup,

@@ -171,13 +171,24 @@ export function usePushNotifications() {
       // dalam aplikasi (tanpa notifikasi sistem kedua).
       const received = Notifications.addNotificationReceivedListener(
         (notification: any) => {
-          void queryClient.invalidateQueries({ queryKey: ['orders'] });
-          void queryClient.invalidateQueries({ queryKey: ['order'] });
-          void queryClient.invalidateQueries({ queryKey: ['payment-status'] });
-          void queryClient.invalidateQueries({ queryKey: ['balance'] });
-          void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
+          const { title, body, data } = notification.request?.content || {};
+          const type = (data as PushData | undefined)?.type;
 
-          const { title, body } = notification.request?.content || {};
+          // Hanya segarkan data yang memang berubah. Broadcast massal tidak
+          // boleh memicu refetch seluruh query di semua perangkat sekaligus.
+          if (type === 'order_status') {
+            void queryClient.invalidateQueries({ queryKey: ['orders'] });
+            void queryClient.invalidateQueries({ queryKey: ['order'] });
+            void queryClient.invalidateQueries({ queryKey: ['payment-status'] });
+            void queryClient.invalidateQueries({ queryKey: ['balance'] });
+            void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
+          } else if (type === 'topup') {
+            void queryClient.invalidateQueries({ queryKey: ['balance'] });
+            void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
+            void queryClient.invalidateQueries({ queryKey: ['topup-pending'] });
+            void queryClient.invalidateQueries({ queryKey: ['topup-status'] });
+          }
+
           if (title) {
             showNotification({
               title,

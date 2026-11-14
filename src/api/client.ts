@@ -163,6 +163,11 @@ export async function apiRequest<T>(
 
   if (!response.ok) {
     const errorBody = (payload ?? {}) as ApiErrorBody;
+    const retryAfterHeader = Number(response.headers.get('retry-after'));
+    const retryAfter =
+      Number.isFinite(retryAfterHeader) && retryAfterHeader > 0
+        ? retryAfterHeader
+        : errorBody.retry_after;
 
     if (response.status === 401 && auth && notifyAuthError) {
       notifyUnauthorized();
@@ -184,7 +189,7 @@ export async function apiRequest<T>(
       {
         status: response.status,
         code: errorBody.code,
-        retryAfter: errorBody.retry_after,
+        retryAfter,
         requestId: errorBody.request_id,
         payload,
       },

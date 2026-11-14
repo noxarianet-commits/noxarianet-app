@@ -1,4 +1,18 @@
-import { QueryClient } from '@tanstack/react-query';
+import { focusManager, QueryClient } from '@tanstack/react-query';
+import { AppState } from 'react-native';
+
+/**
+ * TanStack Query tidak tahu kapan aplikasi React Native masuk background.
+ * Tanpa ini, `refetchInterval` di layar pembayaran/top-up tetap berjalan saat
+ * pengguna pindah ke aplikasi bank untuk membayar.
+ */
+focusManager.setEventListener((handleFocus) => {
+  const subscription = AppState.addEventListener('change', (state) => {
+    handleFocus(state === 'active');
+  });
+
+  return () => subscription.remove();
+});
 
 export const queryClient = new QueryClient({
   defaultOptions: {
@@ -11,6 +25,8 @@ export const queryClient = new QueryClient({
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: false,
+      // Interval polling hanya berjalan saat aplikasi aktif.
+      refetchIntervalInBackground: false,
       retry: (failureCount, error) => {
         const status = (error as { status?: number })?.status;
         if (status && status >= 400 && status < 500) return false;

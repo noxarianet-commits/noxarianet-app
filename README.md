@@ -71,8 +71,9 @@ EXPO_PUBLIC_SUPPORT_URL=https://wa.me/628xxxxxxxxxx
 
 ## Build APK internal (EAS)
 
-Profil `preview` menghasilkan APK internal dengan API staging. Profil
-`production` menghasilkan AAB dengan API production.
+Profil `preview` menghasilkan APK internal dengan API production
+(`https://www.noxarianet.web.id/api`). Profil `production` menghasilkan AAB
+dengan API yang sama.
 
 ```bash
 npx eas-cli@latest login
@@ -82,9 +83,9 @@ npx eas-cli@latest build -p android --profile preview
 Build pertama akan meminta pembuatan keystore Android. Simpan kredensial
 tersebut; keystore yang hilang tidak bisa dipulihkan.
 
-> Sebelum build production, ganti `EXPO_PUBLIC_API_BASE_URL` di profil
-> `production` (`eas.json`) dengan domain API final. Nilai saat ini adalah
-> placeholder.
+> Gunakan domain `www`. Apex `https://noxarianet.web.id` tidak melayani
+> `/api` (404), jadi build yang menunjuk ke sana tidak akan bisa memanggil
+> backend.
 
 ## Struktur
 

@@ -2,7 +2,7 @@ import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
@@ -22,10 +22,10 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useHardwareBackPress } from '@/hooks/useBackHandler';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isRateLimited } from '@/lib/errors';
 import { formatCountdown, formatRupiah } from '@/lib/format';
 import { notifyOrderFailed, notifyOrderSuccess } from '@/lib/notifications';
-import { pollDelay } from '@/lib/polling';
+import { pollDelay, RATE_LIMIT_POLL_DELAY } from '@/lib/polling';
 import { loadPaymentInfo } from '@/lib/storage';
 import {
   colors,
@@ -39,6 +39,7 @@ export default function PaymentScreen() {
   const params = useLocalSearchParams<{ orderId?: string }>();
   const orderId = params.orderId || '';
   const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
 
   const [cancelVisible, setCancelVisible] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -60,20 +61,33 @@ export default function PaymentScreen() {
     staleTime: Infinity,
     enabled: !!orderId,
   });
+  const cache = cacheQuery.data;
 
   const statusQuery = useQuery({
     queryKey: queryKeys.paymentStatus(orderId),
     queryFn: () => getPaymentStatus(orderId),
-    enabled: !!orderId,
+    // Jangan polling saat layar tidak aktif (mis. pengguna pindah ke aplikasi
+    // bank untuk scan QR).
+    enabled: !!orderId && isFocused,
     refetchInterval: (query) => {
-      const status = query.state.data?.data?.status;
+      if (!isFocused) return false;
+      if (isRateLimited(query.state.error)) return RATE_LIMIT_POLL_DELAY;
+
+      const data = query.state.data?.data;
+      const status = data?.status;
       if (status && isFinalOrderStatus(status)) return false;
+
+      // QR tidak mungkin berubah setelah kedaluwarsa; hentikan polling.
+      const expiresAtValue = data?.pg_expired_at || cache?.expiresAt;
+      if (expiresAtValue && new Date(expiresAtValue).getTime() <= Date.now()) {
+        return false;
+      }
+
       return pollDelay(query.state.dataUpdateCount);
     },
   });
 
   const order = statusQuery.data?.data;
-  const cache = cacheQuery.data;
   const status = order?.status;
   const paymentType = order?.payment_type || cache?.paymentType || 'gateway';
   const qrLink = order?.pg_qr_link || order?.payment_link || cache?.qrLink || null;
@@ -111,7 +125,7 @@ export default function PaymentScreen() {
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
       void queryClient.invalidateQueries({ queryKey: ['order', orderId] });
     }
-    previousStatusRef.current = status;
+    previousStatusRef.current = status ?? null;
   }, [order?.product, order?.variant, orderId, queryClient, status]);
 
   const copyValue = async (label: string, value: string) => {

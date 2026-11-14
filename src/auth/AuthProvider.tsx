@@ -13,6 +13,7 @@ import {
 import { ApiError } from '@/api/client';
 import { setAuthToken, setUnauthorizedHandler } from '@/api/authToken';
 import { getMe, login as loginRequest } from '@/api/mobile';
+import { queryKeys } from '@/api/queryKeys';
 import type { UserProfile } from '@/api/types';
 import {
   clearPendingRegistration,
@@ -105,7 +106,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       setStatus('signedIn');
 
       try {
-        const response = await getMe();
+        // Pakai query cache yang sama dengan useMe supaya cold start tidak
+        // mengirim /mobile/me dua kali.
+        const response = await queryClient.fetchQuery({
+          queryKey: queryKeys.me,
+          queryFn: getMe,
+          staleTime: 10 * 60 * 1000,
+        });
         if (cancelled) return;
         setSession({ token: stored.token, user: response.user });
         await saveUserCache(response.user);
@@ -130,7 +137,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     return () => {
       cancelled = true;
     };
-  }, [clearAll]);
+  }, [clearAll, queryClient]);
 
   const signIn = useCallback(
     async (email: string, password: string) => {

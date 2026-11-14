@@ -92,7 +92,7 @@ export default function HomeScreen() {
         style={styles.screenScroll}
         contentContainerStyle={styles.scrollContent}
       >
-        <StatusBar style="light" backgroundColor={colors.coral} />
+        <StatusBar style="light" />
         <HomeSkeleton />
       </ScreenScroll>
     );
@@ -106,7 +106,7 @@ export default function HomeScreen() {
         style={styles.screenScroll}
         contentContainerStyle={styles.scrollContent}
       >
-        <StatusBar style="light" backgroundColor={colors.coral} />
+        <StatusBar style="light" />
         <View style={styles.heroSection}>
           <HomeTopBar
             onNotification={() => setInfoVisible(true)}
@@ -126,7 +126,7 @@ export default function HomeScreen() {
 
   return (
     <>
-      <StatusBar style="light" backgroundColor={colors.coral} />
+      <StatusBar style="light" />
       <ScreenScroll
         refreshing={refreshing}
         onRefresh={refresh}

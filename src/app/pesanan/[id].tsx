@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 
@@ -19,7 +19,7 @@ import { StatusPill } from '@/components/ui/StatusPill';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useHardwareBackPress } from '@/hooks/useBackHandler';
-import { getErrorMessage } from '@/lib/errors';
+import { getErrorMessage, isRateLimited } from '@/lib/errors';
 import {
   formatDateTime,
   formatFullReceiptDateTime,
@@ -27,6 +27,7 @@ import {
   formatReceiptPaymentMethod,
   formatRupiah,
 } from '@/lib/format';
+import { RATE_LIMIT_POLL_DELAY } from '@/lib/polling';
 import { colors, isFinalOrderStatus, radius, spacing } from '@/theme/tokens';
 
 const STATUS_MESSAGES: Record<
@@ -83,6 +84,7 @@ export default function OrderDetailScreen() {
   const params = useLocalSearchParams<{ id?: string }>();
   const orderId = params.id || '';
   const queryClient = useQueryClient();
+  const isFocused = useIsFocused();
 
   const [cancelVisible, setCancelVisible] = useState(false);
   const [receiptVisible, setReceiptVisible] = useState(false);
@@ -113,8 +115,11 @@ export default function OrderDetailScreen() {
     queryKey: queryKeys.order(orderId),
     queryFn: () => getOrder(orderId),
     select: (response) => response.data,
-    enabled: !!orderId,
+    enabled: !!orderId && isFocused,
     refetchInterval: (query) => {
+      if (!isFocused) return false;
+      if (isRateLimited(query.state.error)) return RATE_LIMIT_POLL_DELAY;
+
       const status = query.state.data?.data?.status;
       if (status && isFinalOrderStatus(status)) return false;
       return 20000;
