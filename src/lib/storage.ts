@@ -5,11 +5,15 @@ import { Platform } from 'react-native';
 import type {
   CachedPaymentInfo,
   CachedTopupInfo,
+  HomeData,
+  MobileConfig,
   UserProfile,
 } from '@/api/types';
 
 const TOKEN_KEY = 'noxarianet.session.token';
 const USER_KEY = 'noxarianet.session.user';
+const HOME_CACHE_KEY = 'noxarianet.cache.home';
+const CONFIG_CACHE_KEY = 'noxarianet.cache.config';
 const PENDING_REGISTER_KEY = 'noxarianet.pendingRegistration';
 const INFO_MODAL_KEY = 'noxarianet.infoModal.dismissedAt';
 const PAYMENT_PREFIX = 'noxarianet.payment.';
@@ -91,6 +95,22 @@ export async function saveSession(token: string, user: UserProfile) {
 
 export async function saveUserCache(user: UserProfile) {
   await writeJson(USER_KEY, user);
+}
+
+export async function saveHomeCache(data: HomeData) {
+  await writeJson(HOME_CACHE_KEY, data);
+}
+
+export async function loadHomeCache(): Promise<HomeData | null> {
+  return readJson<HomeData>(HOME_CACHE_KEY);
+}
+
+export async function saveConfigCache(data: MobileConfig) {
+  await writeJson(CONFIG_CACHE_KEY, data);
+}
+
+export async function loadConfigCache(): Promise<MobileConfig | null> {
+  return readJson<MobileConfig>(CONFIG_CACHE_KEY);
 }
 
 export async function loadSession(): Promise<{

@@ -115,18 +115,19 @@ export default function TopupDetailScreen() {
   const countdown = useCountdown(expiresAt);
   const expired = countdown.expired && !!expiresAt;
   const balanceAfter = record?.balance_after;
-  const notifiedSuccessRef = useRef(false);
+  const previousStatusRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (status === 'completed') {
-      if (!notifiedSuccessRef.current) {
-        notifiedSuccessRef.current = true;
+      // Hanya kirim notifikasi jika sebelumnya statusnya pending dan baru saja selesai live
+      if (previousStatusRef.current === 'pending') {
         notifyTopupSuccess(amount || total);
       }
       void queryClient.invalidateQueries({ queryKey: ['balance'] });
       void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
       void queryClient.invalidateQueries({ queryKey: queryKeys.topupPending });
     }
+    previousStatusRef.current = status;
   }, [amount, queryClient, status, total]);
 
   const copyRef = async () => {

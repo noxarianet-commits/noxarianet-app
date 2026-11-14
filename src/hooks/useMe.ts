@@ -12,6 +12,7 @@ export function useMe() {
     queryFn: getMe,
     select: (response) => response.user,
     enabled: !!session?.token,
-    staleTime: 30 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 }

@@ -1,7 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import * as Application from 'expo-application';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Linking, Pressable, StyleSheet, View } from 'react-native';
 
 import { useAuth } from '@/auth/AuthProvider';
@@ -15,6 +15,11 @@ import { useAppConfig } from '@/hooks/useAppConfig';
 import { useTabBackToHome } from '@/hooks/useBackHandler';
 import { useHome } from '@/hooks/useHome';
 import { useMe } from '@/hooks/useMe';
+import {
+  getNotificationPermissionStatus,
+  requestNotificationPermission,
+  notifyCustomMessage,
+} from '@/lib/notifications';
 import { supportWhatsAppNumber, supportWhatsAppUrl } from '@/lib/settings';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
@@ -28,6 +33,23 @@ export default function AccountScreen() {
 
   const [logoutVisible, setLogoutVisible] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [notifGranted, setNotifGranted] = useState<boolean | null>(null);
+
+  // Check permission status on mount
+  useEffect(() => {
+    void getNotificationPermissionStatus().then(setNotifGranted);
+  }, []);
+
+  const handleToggleNotif = useCallback(async () => {
+    const granted = await requestNotificationPermission();
+    setNotifGranted(granted);
+    if (granted) {
+      notifyCustomMessage(
+        'Notifikasi Aktif! 🔔',
+        'Aplikasi Noxarianet siap mengirimkan pesan transaksi dan pengumuman.',
+      );
+    }
+  }, []);
 
   const profile = meQuery.data ?? user;
   const settings = homeQuery.data?.settings;
@@ -175,6 +197,28 @@ export default function AccountScreen() {
           </View>
         </SurfaceCard>
 
+        {/* Section: Pengaturan Aplikasi */}
+        <AppText variant="labelSmall" color={colors.muted} style={styles.groupLabel}>
+          PENGATURAN
+        </AppText>
+        <SurfaceCard padded={false} style={styles.groupCard}>
+          <View style={styles.groupInner}>
+            <ListRow
+              icon="bell-ring-outline"
+              title="Notifikasi Aplikasi"
+              description={
+                notifGranted === null
+                  ? 'Memeriksa...'
+                  : notifGranted
+                    ? 'Notifikasi aktif'
+                    : 'Ketuk untuk mengaktifkan notifikasi'
+              }
+              onPress={() => void handleToggleNotif()}
+              showDivider={false}
+            />
+          </View>
+        </SurfaceCard>
+
         {/* Section: Bantuan */}
         <AppText variant="labelSmall" color={colors.muted} style={styles.groupLabel}>
           PUSAT BANTUAN
@@ -219,7 +263,7 @@ export default function AccountScreen() {
         {/* Minimal Footer */}
         <View style={styles.footer}>
           <AppText variant="labelSmall" color={colors.muted} style={styles.footerBrand}>
-            NOXARIANET STORE
+            NOXARIANET
           </AppText>
           <AppText variant="bodySmall" color={colors.muted} align="center">
             Versi {version}

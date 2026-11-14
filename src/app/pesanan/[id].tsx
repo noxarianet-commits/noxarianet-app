@@ -3,10 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { cancelOrder, getOrder } from '@/api/mobile';
 import { queryKeys } from '@/api/queryKeys';
+import { ReceiptModal } from '@/components/order/ReceiptModal';
 import { AppHeader } from '@/components/ui/AppHeader';
 import { AppText } from '@/components/ui/AppText';
 import { PrimaryButton, SecondaryButton, TextButton } from '@/components/ui/Buttons';
@@ -19,8 +20,13 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { useHardwareBackPress } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
-import { formatDateTime, formatLongDate, formatRupiah } from '@/lib/format';
-import { notifyOrderFailed, notifyOrderSuccess } from '@/lib/notifications';
+import {
+  formatDateTime,
+  formatFullReceiptDateTime,
+  formatLongDate,
+  formatReceiptPaymentMethod,
+  formatRupiah,
+} from '@/lib/format';
 import { colors, isFinalOrderStatus, radius, spacing } from '@/theme/tokens';
 
 const STATUS_MESSAGES: Record<
@@ -79,14 +85,18 @@ export default function OrderDetailScreen() {
   const queryClient = useQueryClient();
 
   const [cancelVisible, setCancelVisible] = useState(false);
+  const [receiptVisible, setReceiptVisible] = useState(false);
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
-  const notifiedOrderStatusRef = useRef<string | null>(null);
 
   useHardwareBackPress(() => {
+    if (receiptVisible) {
+      setReceiptVisible(false);
+      return true;
+    }
     if (cancelVisible) {
       setCancelVisible(false);
       return true;
@@ -129,19 +139,11 @@ export default function OrderDetailScreen() {
 
   useEffect(() => {
     if (status && isFinalOrderStatus(status)) {
-      if (notifiedOrderStatusRef.current !== status) {
-        notifiedOrderStatusRef.current = status;
-        if (status === 'COMPLETED') {
-          notifyOrderSuccess(order?.product || 'Pesanan', order?.variant);
-        } else if (status === 'FAILED' || status === 'CANCELLED') {
-          notifyOrderFailed(order?.product || 'Pesanan', order?.variant);
-        }
-      }
       void queryClient.invalidateQueries({ queryKey: ['balance'] });
       void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
       void queryClient.invalidateQueries({ queryKey: ['orders'] });
     }
-  }, [order?.product, order?.variant, queryClient, status]);
+  }, [queryClient, status]);
 
   const handleCancel = async () => {
     setCancelling(true);
@@ -244,6 +246,21 @@ export default function OrderDetailScreen() {
           if (router.canGoBack()) router.back();
           else router.replace('/(tabs)/pesanan');
         }}
+        right={
+          <Pressable
+            onPress={() => setReceiptVisible(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Cetak Struk"
+            hitSlop={8}
+            style={({ pressed }) => [styles.headerBtn, pressed && styles.pressed]}
+          >
+            <MaterialCommunityIcons
+              name="printer-outline"
+              size={22}
+              color={colors.coralDark}
+            />
+          </Pressable>
+        }
       />
 
       {statusInfo ? (
@@ -285,7 +302,7 @@ export default function OrderDetailScreen() {
         ) : null}
         <ReceiptRow
           label="Metode Bayar"
-          value={paidWithBalance ? 'Saldo Akun' : order.payment_type?.toUpperCase() || 'Gateway'}
+          value={formatReceiptPaymentMethod(order.payment_type)}
         />
         <ReceiptRow label="Harga" value={formatRupiah(order.price)} />
         {order.fee ? <ReceiptRow label="Biaya Admin" value={formatRupiah(order.fee)} /> : null}
@@ -296,7 +313,7 @@ export default function OrderDetailScreen() {
         />
         <ReceiptRow
           label="Waktu Pemesanan"
-          value={order.timestamp ? formatDateTime(order.timestamp) : '-'}
+          value={formatFullReceiptDateTime(order.timestamp)}
         />
       </SurfaceCard>
 
@@ -334,6 +351,14 @@ export default function OrderDetailScreen() {
       ) : null}
 
       <View style={styles.actions}>
+        {/* Tombol Cetak & Bagikan Struk Bukti Transaksi */}
+        <PrimaryButton
+          icon="receipt-text-outline"
+          onPress={() => setReceiptVisible(true)}
+        >
+          Cetak / Bagikan Struk
+        </PrimaryButton>
+
         {awaitingPayment ? (
           <PrimaryButton
             onPress={() =>
@@ -378,6 +403,12 @@ export default function OrderDetailScreen() {
         onDismiss={() => setCancelVisible(false)}
         loading={cancelling}
       />
+
+      <ReceiptModal
+        visible={receiptVisible}
+        onClose={() => setReceiptVisible(false)}
+        order={order}
+      />
     </ScreenScroll>
   );
 }
@@ -407,6 +438,13 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
+  },
+  headerBtn: {
+    padding: spacing.xs,
+    borderRadius: radius.pill,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });
 

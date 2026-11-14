@@ -9,6 +9,7 @@ export function useProduct(id?: string | null) {
     queryFn: () => getProduct(String(id)),
     select: (response) => response.data,
     enabled: !!id,
-    staleTime: 60 * 1000,
+    staleTime: 15 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 }

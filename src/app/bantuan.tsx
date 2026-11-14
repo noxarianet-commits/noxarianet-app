@@ -145,14 +145,21 @@ export default function SupportScreen() {
       </SurfaceCard>
 
       <View style={styles.footer}>
-        <MaterialCommunityIcons
-          name="shield-check-outline"
-          size={16}
-          color={colors.muted}
-        />
-        <AppText variant="bodySmall" color={colors.muted} align="center">
-          CS tidak pernah meminta password atau kode OTP akunmu.
-        </AppText>
+        <View style={styles.securityBox}>
+          <MaterialCommunityIcons
+            name="shield-check-outline"
+            size={15}
+            color={colors.muted}
+            style={styles.securityIcon}
+          />
+          <AppText
+            variant="bodySmall"
+            color={colors.muted}
+            style={styles.securityText}
+          >
+            CS tidak pernah meminta password atau kode OTP akunmu.
+          </AppText>
+        </View>
       </View>
     </ScreenScroll>
   );
@@ -245,10 +252,29 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   footer: {
+    marginTop: spacing.xl,
+    marginBottom: spacing.base,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+    paddingHorizontal: spacing.xs,
+  },
+  securityBox: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    marginTop: spacing.lg,
+    maxWidth: '100%',
+    alignSelf: 'center',
+  },
+  securityIcon: {
+    flexShrink: 0,
+  },
+  securityText: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: colors.muted,
+    textAlign: 'center',
+    flexShrink: 1,
   },
 });

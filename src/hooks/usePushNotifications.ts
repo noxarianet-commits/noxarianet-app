@@ -1,9 +1,19 @@
 import { useQueryClient } from '@tanstack/react-query';
 import * as Application from 'expo-application';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Platform } from 'react-native';
+
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+// Safe dynamic require to avoid crashing in Expo Go
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Notifications: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+} catch {}
 
 import { registerDevice, unregisterDevice } from '@/api/mobile';
 import { useAuth } from '@/auth/AuthProvider';
@@ -88,9 +98,14 @@ export function usePushNotifications() {
   const queryClient = useQueryClient();
   const userId = session?.user?.id ?? null;
 
+  const isWeb = Platform.OS === 'web';
+  // Remote push notifications dinonaktifkan di Web dan Expo Go (karena hanya didukung di Android/iOS native).
+  // Fitur ini otomatis aktif penuh di Development Build & Release APK Android/iOS.
+  const isAvailable = !isWeb && !isExpoGo && Boolean(Notifications?.addPushTokenListener);
+
   // ── Registrasi token ────────────────────────────────────────────────────
   useEffect(() => {
-    if (status === 'loading') return;
+    if (!isAvailable || status === 'loading') return;
 
     let cancelled = false;
 
@@ -119,83 +134,95 @@ export function usePushNotifications() {
     return () => {
       cancelled = true;
     };
-  }, [status, userId]);
+  }, [isAvailable, status, userId]);
 
   // Token bisa di-rotasi oleh FCM saat aplikasi berjalan. Yang didaftarkan ke
   // backend adalah Expo Push Token (bukan token mentah FCM), jadi saat listener
   // ini berbunyi kita ambil ulang token Expo-nya dan daftarkan kembali.
   useEffect(() => {
-    const subscription = Notifications.addPushTokenListener(() => {
-      if (!userId) return;
-      void (async () => {
-        const result = await getExpoPushToken();
-        if (!result.ok) return;
-        await registerDevice({
-          push_token: result.token,
-          platform: currentPlatform(),
-          app_version: Application.nativeApplicationVersion ?? undefined,
-        }).catch(() => undefined);
-      })();
-    });
-    return () => subscription.remove();
-  }, [userId]);
+    if (!isAvailable) return;
+    try {
+      const subscription = Notifications.addPushTokenListener(() => {
+        if (!userId) return;
+        void (async () => {
+          const result = await getExpoPushToken();
+          if (!result.ok) return;
+          await registerDevice({
+            push_token: result.token,
+            platform: currentPlatform(),
+            app_version: Application.nativeApplicationVersion ?? undefined,
+          }).catch(() => undefined);
+        })();
+      });
+      return () => subscription?.remove?.();
+    } catch {
+      return () => {};
+    }
+  }, [isAvailable, userId]);
 
   // ── Penerimaan & interaksi ──────────────────────────────────────────────
   const handledResponseId = useRef<string | null>(null);
 
   useEffect(() => {
-    // Notifikasi masuk saat aplikasi di foreground: sistem sudah menampilkan
-    // bannernya sendiri, jadi di sini cukup segarkan data dan tampilkan banner
-    // dalam aplikasi (tanpa notifikasi sistem kedua).
-    const received = Notifications.addNotificationReceivedListener(
-      (notification) => {
-        void queryClient.invalidateQueries({ queryKey: ['orders'] });
-        void queryClient.invalidateQueries({ queryKey: ['order'] });
-        void queryClient.invalidateQueries({ queryKey: ['payment-status'] });
-        void queryClient.invalidateQueries({ queryKey: ['balance'] });
-        void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
+    if (!isAvailable) return;
+    try {
+      // Notifikasi masuk saat aplikasi di foreground: sistem sudah menampilkan
+      // bannernya sendiri, jadi di sini cukup segarkan data dan tampilkan banner
+      // dalam aplikasi (tanpa notifikasi sistem kedua).
+      const received = Notifications.addNotificationReceivedListener(
+        (notification: any) => {
+          void queryClient.invalidateQueries({ queryKey: ['orders'] });
+          void queryClient.invalidateQueries({ queryKey: ['order'] });
+          void queryClient.invalidateQueries({ queryKey: ['payment-status'] });
+          void queryClient.invalidateQueries({ queryKey: ['balance'] });
+          void queryClient.invalidateQueries({ queryKey: ['balance-history'] });
 
-        const { title, body } = notification.request.content;
-        if (title) {
-          showNotification({
-            title,
-            body: body ?? '',
-            tone: 'info',
-            system: false,
-          });
-        }
-      },
-    );
+          const { title, body } = notification.request?.content || {};
+          if (title) {
+            showNotification({
+              title,
+              body: body ?? '',
+              tone: 'info',
+              system: false,
+            });
+          }
+        },
+      );
 
-    // Notifikasi disadap — buka layar terkait. Dipakai untuk tap saat app
-    // berjalan maupun saat app dibuka dari notifikasi (cold start).
-    const handleResponse = (response: Notifications.NotificationResponse) => {
-      const id = response.notification.request.identifier;
-      if (handledResponseId.current === id) return;
-      handledResponseId.current = id;
+      // Notifikasi disadap — buka layar terkait. Dipakai untuk tap saat app
+      // berjalan maupun saat app dibuka dari notifikasi (cold start).
+      const handleResponse = (response: any) => {
+        const id = response?.notification?.request?.identifier;
+        if (!id || handledResponseId.current === id) return;
+        handledResponseId.current = id;
 
-      const data = response.notification.request.content.data as
-        | PushData
-        | undefined;
-      navigateFromNotification(data);
-    };
+        const data = response?.notification?.request?.content?.data as
+          | PushData
+          | undefined;
+        navigateFromNotification(data);
+      };
 
-    const response = Notifications.addNotificationResponseReceivedListener(
-      handleResponse,
-    );
+      const response = Notifications.addNotificationResponseReceivedListener(
+        handleResponse,
+      );
 
-    void Notifications.getLastNotificationResponseAsync().then((last) => {
-      if (last) handleResponse(last);
-    });
+      void Notifications.getLastNotificationResponseAsync?.()?.then?.((last: any) => {
+        if (last) handleResponse(last);
+      });
 
-    return () => {
-      received.remove();
-      response.remove();
-    };
-  }, [queryClient]);
+      return () => {
+        received?.remove?.();
+        response?.remove?.();
+      };
+    } catch {
+      return () => {};
+    }
+  }, [isAvailable, queryClient]);
 
-  // Inisialisasi channel + izin, sekali saja.
+  // Inisialisasi channel + izin, sekali saja (hanya di native).
   useEffect(() => {
-    void initNotifications();
-  }, []);
+    if (!isExpoGo && !isWeb) {
+      void initNotifications();
+    }
+  }, [isWeb]);
 }

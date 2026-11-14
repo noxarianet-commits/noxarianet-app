@@ -10,7 +10,8 @@ export function useBalance() {
     queryKey: queryKeys.balance,
     queryFn: getBalance,
     select: (response) => response.data,
-    staleTime: 30 * 1000,
+    staleTime: 3 * 60 * 1000,
+    gcTime: 24 * 60 * 60 * 1000,
   });
 
   const previousBalanceRef = useRef<number | null>(null);

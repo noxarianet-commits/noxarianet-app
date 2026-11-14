@@ -1,7 +1,15 @@
-import Constants from 'expo-constants';
-import * as Device from 'expo-device';
-import * as Notifications from 'expo-notifications';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { Platform } from 'react-native';
+
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
+// Safe dynamic require to avoid crashing in Expo Go
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let Notifications: any = null;
+try {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  Notifications = require('expo-notifications');
+} catch {}
 
 import { initNotifications } from '@/lib/notifications';
 import { loadPushToken, savePushToken } from '@/lib/storage';
@@ -35,7 +43,7 @@ function resolveProjectId(): string | null {
  * oleh initNotifications().
  */
 export async function getExpoPushToken(): Promise<PushTokenResult> {
-  if (Platform.OS === 'web' || !Device.isDevice) {
+  if (Platform.OS === 'web' || isExpoGo || !Notifications) {
     return { ok: false, reason: 'unsupported' };
   }
 

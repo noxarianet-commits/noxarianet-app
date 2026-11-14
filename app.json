@@ -1,10 +1,13 @@
 {
   "expo": {
-    "name": "Noxarianet Store",
+    "name": "Noxarianet",
     "slug": "noxarianet-store",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["android"],
+    "platforms": [
+      "android",
+      "web"
+    ],
     "icon": "./assets/images/icon.png",
     "scheme": "noxarianet",
     "userInterfaceStyle": "light",
@@ -14,9 +17,14 @@
       "versionCode": 1,
       "allowBackup": false,
       "predictiveBackGestureEnabled": true,
+      "permissions": [
+        "RECEIVE_BOOT_COMPLETED",
+        "VIBRATE",
+        "POST_NOTIFICATIONS"
+      ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#4D1B8C",
+        "backgroundColor": "#FFFFFF",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
@@ -36,13 +44,18 @@
       [
         "expo-notifications",
         {
-          "defaultChannel": "noxarianet_transaksi",
-          "color": "#4D1B8C"
+          "icon": "./assets/images/android-icon-monochrome.png",
+          "color": "#4D1B8C",
+          "defaultChannel": "noxarianet_transaksi"
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "web": {
+      "bundler": "metro",
+      "favicon": "./assets/images/icon.png"
     },
     "extra": {
       "router": {

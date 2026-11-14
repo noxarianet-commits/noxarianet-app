@@ -1,6 +1,7 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal } from 'react-native-paper';
@@ -15,7 +16,7 @@ import { RemoteArtwork } from '@/components/ui/RemoteArtwork';
 import { ScreenScroll } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { HomeSkeleton } from '@/components/ui/Skeleton';
-import { ErrorState, LoadingState } from '@/components/ui/States';
+import { ErrorState } from '@/components/ui/States';
 import { BalanceCard } from '@/components/wallet/BalanceCard';
 import { useBalance } from '@/hooks/useBalance';
 import { useAppConfig } from '@/hooks/useAppConfig';
@@ -24,7 +25,7 @@ import { useHome } from '@/hooks/useHome';
 import { useMe } from '@/hooks/useMe';
 import { firstName } from '@/lib/format';
 import { dismissInfoModal, shouldShowInfoModal } from '@/lib/storage';
-import { colors, fonts, radius, spacing } from '@/theme/tokens';
+import { colors, fonts, layout, radius, spacing } from '@/theme/tokens';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -86,7 +87,12 @@ export default function HomeScreen() {
 
   if (homeQuery.isPending) {
     return (
-      <ScreenScroll>
+      <ScreenScroll
+        safeStyle={{ backgroundColor: colors.coral }}
+        style={styles.screenScroll}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <StatusBar style="light" backgroundColor={colors.coral} />
         <HomeSkeleton />
       </ScreenScroll>
     );
@@ -94,210 +100,235 @@ export default function HomeScreen() {
 
   if (homeQuery.isError && !homeQuery.data) {
     return (
-      <ScreenScroll>
-        <HomeTopBar
-          onNotification={() => setInfoVisible(true)}
-          onChat={() => router.push('/bantuan')}
-        />
-        <ErrorState
-          error={homeQuery.error}
-          title="Beranda belum bisa dimuat"
-          onRetry={refresh}
-        />
+      <ScreenScroll
+        padded={false}
+        safeStyle={{ backgroundColor: colors.coral }}
+        style={styles.screenScroll}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <StatusBar style="light" backgroundColor={colors.coral} />
+        <View style={styles.heroSection}>
+          <HomeTopBar
+            onNotification={() => setInfoVisible(true)}
+            onChat={() => router.push('/bantuan')}
+          />
+        </View>
+        <View style={styles.bodyContent}>
+          <ErrorState
+            error={homeQuery.error}
+            title="Beranda belum bisa dimuat"
+            onRetry={refresh}
+          />
+        </View>
       </ScreenScroll>
     );
   }
 
   return (
     <>
-      <ScreenScroll refreshing={refreshing} onRefresh={refresh}>
-        <HomeTopBar
-          onNotification={() => setInfoVisible(true)}
-          onChat={() => router.push('/bantuan')}
-          hasNotification={Boolean(settings?.info_modal_text)}
-        />
+      <StatusBar style="light" backgroundColor={colors.coral} />
+      <ScreenScroll
+        refreshing={refreshing}
+        onRefresh={refresh}
+        padded={false}
+        safeStyle={{ backgroundColor: colors.coral }}
+        style={styles.screenScroll}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* BRImo-style Purple Hero Section */}
+        <View style={styles.heroSection}>
+          <HomeTopBar
+            onNotification={() => setInfoVisible(true)}
+            onChat={() => router.push('/bantuan')}
+            hasNotification={Boolean(settings?.info_modal_text)}
+          />
 
-        <View style={styles.greeting}>
-          <AppText variant="headlineSmall" style={styles.greetingTitle}>
-            Halo, {firstName(profile?.display_name) || 'Pengguna'}
-          </AppText>
+          <View style={styles.greeting}>
+            <AppText variant="headlineSmall" style={styles.greetingTitle}>
+              Halo, {firstName(profile?.display_name) || 'Pengguna'}
+            </AppText>
+          </View>
+
+          {shopClosed ? (
+            <InfoBanner
+              tone="warning"
+              title="Toko sedang tutup"
+              message={
+                settings?.shop_status?.message ||
+                'Pesanan baru belum bisa diproses saat ini.'
+              }
+              style={styles.banner}
+            />
+          ) : null}
+
+          <BalanceCard
+            balance={balanceQuery.data?.balance ?? profile?.balance ?? 0}
+            limit={balanceQuery.data?.balance_limit ?? profile?.balance_limit}
+            onTopup={() => router.push('/topup')}
+            onHistory={() => router.push('/saldo/riwayat')}
+            style={styles.balanceCardOverride}
+          />
         </View>
 
-        {shopClosed ? (
-          <InfoBanner
-            tone="warning"
-            title="Toko sedang tutup"
-            message={
-              settings?.shop_status?.message ||
-              'Pesanan baru belum bisa diproses saat ini.'
-            }
-            style={styles.banner}
-          />
-        ) : null}
-
-        <BalanceCard
-          balance={balanceQuery.data?.balance ?? profile?.balance ?? 0}
-          limit={balanceQuery.data?.balance_limit ?? profile?.balance_limit}
-          onTopup={() => router.push('/topup')}
-          onHistory={() => router.push('/saldo/riwayat')}
-        />
-
-        {categories.length ? (
-          <View style={styles.section}>
-            <SectionHeader
-              eyebrow="Jelajahi"
-              title="Kategori"
-              actionLabel="Semua"
-              onAction={() => router.push('/(tabs)/katalog')}
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryRow}
-            >
-              {categories.map((category) => (
-                <CategoryCard
-                  key={category.slug || category.name}
-                  category={category}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(tabs)/katalog',
-                      params: { category: category.name },
-                    })
-                  }
-                />
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
-        {billCategories.length ? (
-          <View style={styles.section}>
-            <SectionHeader
-              eyebrow="Bayar tagihan"
-              title="Kategori tagihan"
-              actionLabel="Semua"
-              onAction={() =>
-                router.push({
-                  pathname: '/(tabs)/katalog',
-                  params: { type: 'postpaid' },
-                })
-              }
-            />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoryRow}
-            >
-              {billCategories.map((category) => (
-                <BillCategoryCard
-                  key={category.slug || category.name}
-                  category={category}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/(tabs)/katalog',
-                      params: { type: 'postpaid', category: category.name },
-                    })
-                  }
-                />
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
-        <View style={styles.section}>
-          <SectionHeader
-            eyebrow="Paling dicari"
-            title="Pilihan cepat"
-            actionLabel="Lihat semua"
-            onAction={() => router.push('/(tabs)/katalog')}
-          />
-          {featured.length ? (
-            <View style={styles.grid}>
-              {featured.slice(0, 6).map((product) => (
-                <View key={`${product.vendor}-${product.id}`} style={styles.gridItem}>
-                  <ProductCard
-                    product={product}
-                    serverCount={product.servers?.length}
+        {/* Clean Light Body Content Area */}
+        <View style={styles.bodyContent}>
+          {categories.length ? (
+            <View style={styles.section}>
+              <SectionHeader
+                eyebrow="Jelajahi"
+                title="Kategori"
+                actionLabel="Semua"
+                onAction={() => router.push('/(tabs)/katalog')}
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryRow}
+              >
+                {categories.map((category) => (
+                  <CategoryCard
+                    key={category.slug || category.name}
+                    category={category}
                     onPress={() =>
                       router.push({
-                        pathname: '/produk/[id]',
-                        params: { id: String(product.id) },
+                        pathname: '/(tabs)/katalog',
+                        params: { category: category.name },
                       })
                     }
                   />
-                </View>
-              ))}
+                ))}
+              </ScrollView>
             </View>
-          ) : (
-            <InfoBanner
-              tone="info"
-              title="Katalog sedang disiapkan"
-              message="Produk akan muncul di sini setelah sinkronisasi selesai."
-            />
-          )}
-        </View>
+          ) : null}
 
-        {testimonials.length ? (
+          {billCategories.length ? (
+            <View style={styles.section}>
+              <SectionHeader
+                eyebrow="Bayar tagihan"
+                title="Kategori tagihan"
+                actionLabel="Semua"
+                onAction={() =>
+                  router.push({
+                    pathname: '/(tabs)/katalog',
+                    params: { type: 'postpaid' },
+                  })
+                }
+              />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.categoryRow}
+              >
+                {billCategories.map((category) => (
+                  <BillCategoryCard
+                    key={category.slug || category.name}
+                    category={category}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/(tabs)/katalog',
+                        params: { type: 'postpaid', category: category.name },
+                      })
+                    }
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
           <View style={styles.section}>
-            <SectionHeader eyebrow="Cerita pembeli" title="Kata mereka" />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.testimonialRow}
-            >
-              {testimonials.slice(0, 8).map((testimonial) => (
-                <View key={testimonial.id} style={styles.testimonialCard}>
-                  <View style={styles.stars}>
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <MaterialCommunityIcons
-                        key={index}
-                        name={index < testimonial.rating ? 'star' : 'star-outline'}
-                        size={13}
-                        color={colors.gold}
-                      />
-                    ))}
-                  </View>
-                  <AppText variant="bodyMedium" style={styles.testimonialText}>
-                    “{testimonial.text}”
-                  </AppText>
-                  <AppText variant="labelSmall" color={colors.muted}>
-                    {testimonial.name.toUpperCase()}
-                  </AppText>
-                </View>
-              ))}
-            </ScrollView>
-          </View>
-        ) : null}
-
-        <View style={styles.supportCard}>
-          <View style={styles.supportCopy}>
-            <AppText variant="titleMedium">Butuh bantuan?</AppText>
-            <AppText variant="bodySmall" color={colors.muted}>
-              Tim CS siap membantu lewat WhatsApp.
-            </AppText>
-          </View>
-          <Pressable
-            onPress={() => router.push('/bantuan')}
-            style={({ pressed }) => [
-              styles.supportButton,
-              pressed && styles.pressed,
-            ]}
-          >
-            <MaterialCommunityIcons
-              name="whatsapp"
-              size={18}
-              color={colors.surface}
+            <SectionHeader
+              eyebrow="Paling dicari"
+              title="Pilihan cepat"
+              actionLabel="Lihat semua"
+              onAction={() => router.push('/(tabs)/katalog')}
             />
-            <AppText variant="labelMedium" style={styles.supportLabel}>
-              Hubungi
-            </AppText>
-          </Pressable>
-        </View>
+            {featured.length ? (
+              <View style={styles.grid}>
+                {featured.slice(0, 6).map((product) => (
+                  <View key={`${product.vendor}-${product.id}`} style={styles.gridItem}>
+                    <ProductCard
+                      product={product}
+                      serverCount={product.servers?.length}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/produk/[id]',
+                          params: { id: String(product.id) },
+                        })
+                      }
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <InfoBanner
+                tone="info"
+                title="Katalog sedang disiapkan"
+                message="Produk akan muncul di sini setelah sinkronisasi selesai."
+              />
+            )}
+          </View>
 
-        <AppText variant="bodySmall" color={colors.muted} align="center" style={styles.footer}>
-          Noxarianet Store · produk digital & top up
-        </AppText>
+          {testimonials.length ? (
+            <View style={styles.section}>
+              <SectionHeader eyebrow="Cerita pembeli" title="Kata mereka" />
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.testimonialRow}
+              >
+                {testimonials.slice(0, 8).map((testimonial) => (
+                  <View key={testimonial.id} style={styles.testimonialCard}>
+                    <View style={styles.stars}>
+                      {Array.from({ length: 5 }).map((_, index) => (
+                        <MaterialCommunityIcons
+                          key={index}
+                          name={index < testimonial.rating ? 'star' : 'star-outline'}
+                          size={13}
+                          color={colors.gold}
+                        />
+                      ))}
+                    </View>
+                    <AppText variant="bodyMedium" style={styles.testimonialText}>
+                      “{testimonial.text}”
+                    </AppText>
+                    <AppText variant="labelSmall" color={colors.muted}>
+                      {testimonial.name.toUpperCase()}
+                    </AppText>
+                  </View>
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          <View style={styles.supportCard}>
+            <View style={styles.supportCopy}>
+              <AppText variant="titleMedium">Butuh bantuan?</AppText>
+              <AppText variant="bodySmall" color={colors.muted}>
+                Tim CS siap membantu lewat WhatsApp.
+              </AppText>
+            </View>
+            <Pressable
+              onPress={() => router.push('/bantuan')}
+              style={({ pressed }) => [
+                styles.supportButton,
+                pressed && styles.pressed,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="whatsapp"
+                size={18}
+                color={colors.surface}
+              />
+              <AppText variant="labelMedium" style={styles.supportLabel}>
+                Hubungi
+              </AppText>
+            </Pressable>
+          </View>
+
+          <AppText variant="bodySmall" color={colors.muted} align="center" style={styles.footer}>
+            Noxarianet Store · produk digital & top up
+          </AppText>
+        </View>
       </ScreenScroll>
 
       <Portal>
@@ -347,7 +378,9 @@ function HomeTopBar({
   return (
     <View style={styles.topBar}>
       <View style={styles.topBarLeft}>
-        <AppLogo size={32} />
+        <View style={styles.logoBadge}>
+          <AppLogo size={28} rounded />
+        </View>
         <View style={styles.brand}>
           <AppText variant="titleMedium" style={styles.brandName} numberOfLines={1}>
             NOXARIANET
@@ -365,7 +398,7 @@ function HomeTopBar({
           <MaterialCommunityIcons
             name="chat-processing-outline"
             size={18}
-            color={colors.ink}
+            color="#FFFFFF"
           />
         </Pressable>
 
@@ -378,7 +411,7 @@ function HomeTopBar({
           <MaterialCommunityIcons
             name="bell-outline"
             size={18}
-            color={colors.ink}
+            color="#FFFFFF"
           />
           {hasNotification ? <View style={styles.actionDot} /> : null}
         </Pressable>
@@ -452,20 +485,59 @@ function CategoryCard({
 }
 
 const styles = StyleSheet.create({
+  screenScroll: {
+    backgroundColor: colors.paper,
+  },
+  scrollContent: {
+    backgroundColor: colors.paper,
+    flexGrow: 1,
+  },
+  // BRImo-style Purple Hero Section
+  heroSection: {
+    backgroundColor: colors.coral, // #4D1B8C
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.xs,
+    paddingBottom: spacing.base + 2,
+    borderBottomLeftRadius: 28,
+    borderBottomRightRadius: 28,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: colors.coralDark,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+
+  // Top Bar inside Hero
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: spacing.base + 2,
+    paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
   },
   topBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flex: 1,
     minWidth: 0,
     marginRight: spacing.sm,
+  },
+  logoBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
   },
   brand: {
     flexShrink: 1,
@@ -476,55 +548,79 @@ const styles = StyleSheet.create({
     letterSpacing: 0.8,
     fontFamily: fonts.extraBold,
     fontSize: 16,
-    color: colors.ink,
+    color: '#FFFFFF',
   },
   topBarActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
     flexShrink: 0,
   },
   actionBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: colors.surface,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     borderWidth: 1,
-    borderColor: colors.line,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
   },
   actionDot: {
     position: 'absolute',
-    top: 5,
-    right: 5,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.danger,
+    top: 6,
+    right: 6,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#FF3B30',
+    borderWidth: 1,
+    borderColor: '#FFFFFF',
   },
-  avatarButton: {
-    padding: 2,
-  },
+
+  // Greeting inside Hero
   greeting: {
-    marginTop: spacing.base,
+    marginTop: spacing.md,
     marginBottom: spacing.xs,
   },
   greetingTitle: {
     fontFamily: fonts.extraBold,
     fontSize: 22,
     lineHeight: 28,
-    color: colors.ink,
+    color: '#FFFFFF',
   },
+
+  // Balance Card in Hero (ATM Card Elevation)
+  balanceCardOverride: {
+    backgroundColor: '#381169', // Rich royal purple for ATM card contrast
+    borderColor: 'rgba(255, 255, 255, 0.22)',
+    borderWidth: 1.2,
+    marginTop: spacing.sm,
+    shadowColor: '#1A0533',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+
   banner: {
-    marginTop: spacing.base,
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   pressed: {
     opacity: 0.7,
   },
+
+  // Body Content below Hero
+  bodyContent: {
+    backgroundColor: colors.paper,
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.base,
+    gap: spacing.xl,
+    flex: 1,
+  },
   section: {
-    marginTop: spacing.xl,
     gap: spacing.md,
   },
   categoryRow: {
@@ -619,7 +715,6 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   supportCard: {
-    marginTop: spacing.xl,
     backgroundColor: colors.tealSoft,
     borderWidth: 1,
     borderColor: '#C4E2D8',
@@ -651,7 +746,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   footer: {
-    marginTop: spacing.lg,
+    marginTop: spacing.xs,
   },
   dialog: {
     backgroundColor: colors.surface,

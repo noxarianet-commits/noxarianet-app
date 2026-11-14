@@ -38,6 +38,7 @@ export function Screen({
 type ScrollProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
   contentContainerStyle?: StyleProp<ViewStyle>;
+  safeStyle?: StyleProp<ViewStyle>;
   padded?: boolean;
   edges?: Edge[];
   refreshing?: boolean;
@@ -50,6 +51,7 @@ export function ScreenScroll({
   children,
   style,
   contentContainerStyle,
+  safeStyle,
   padded = true,
   edges = ['top', 'left', 'right'],
   refreshing,
@@ -58,7 +60,7 @@ export function ScreenScroll({
   bottomInset = 32,
 }: ScrollProps) {
   return (
-    <SafeAreaView style={styles.safe} edges={edges}>
+    <SafeAreaView style={[styles.safe, safeStyle]} edges={edges}>
       <ScrollView
         style={[styles.scroll, style]}
         contentContainerStyle={[

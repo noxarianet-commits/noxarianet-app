@@ -32,7 +32,7 @@ export default function OrdersScreen() {
   useTabBackToHome();
 
   const orders = useMemo(
-    () => ordersQuery.data?.pages.flatMap((page) => page.data) ?? [],
+    () => ordersQuery.data?.pages.flatMap((page) => page?.data ?? []) ?? [],
     [ordersQuery.data],
   );
 
@@ -83,7 +83,14 @@ export default function OrdersScreen() {
                 <AppText variant="headlineLarge">Pesanan kamu</AppText>
               </View>
               <AppText variant="labelSmall" color={colors.muted} style={styles.totalBadge}>
-                {ordersQuery.data?.pages[0]?.meta.total ?? 0} TOTAL
+                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+                {(ordersQuery.data?.pages[0] as any)?.meta?.total ??
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (ordersQuery.data?.pages[0] as any)?.pagination?.total ??
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  (ordersQuery.data?.pages[0] as any)?.total ??
+                  orders.length}{' '}
+                TOTAL
               </AppText>
             </View>
 

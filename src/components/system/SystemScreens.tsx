@@ -22,7 +22,7 @@ export function MaintenanceScreen({
       <View style={styles.content}>
         <AppLogo size={72} />
         <AppText variant="labelSmall" color={colors.coralDark} style={styles.eyebrow}>
-          NOXARIANET STORE
+          NOXARIANET
         </AppText>
         <AppText variant="headlineLarge" align="center">
           Toko sedang tutup sebentar
