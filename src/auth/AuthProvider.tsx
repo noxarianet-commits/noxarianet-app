@@ -113,6 +113,15 @@ export function AuthProvider({ children }: PropsWithChildren) {
         if (cancelled) return;
         if (error instanceof ApiError && error.isAuthError) {
           await clearAll('Sesi telah berakhir. Silakan masuk kembali.');
+          return;
+        }
+        // 404 dari /me berarti akunnya sudah tidak ada di server (mis. dihapus)
+        // sementara tokennya masih berlaku sampai 30 hari. Tanpa ini user terjebak
+        // di "sesi hantu" — semua permintaan berikutnya gagal, tapi tidak pernah
+        // dikeluarkan.
+        if (error instanceof ApiError && error.status === 404) {
+          await clearAll('Akun tidak ditemukan. Silakan masuk kembali.');
+          return;
         }
         // A network failure keeps the cached session; the user can retry later.
       }
