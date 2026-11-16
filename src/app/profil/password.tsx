@@ -11,6 +11,7 @@ import { InfoBanner } from '@/components/ui/InfoBanner';
 import { KeyboardScreen, ScreenScroll } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TextField } from '@/components/ui/TextField';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
 import {
   hasErrors,
@@ -20,6 +21,8 @@ import {
 import { colors, fonts, spacing } from '@/theme/tokens';
 
 export default function ChangePasswordScreen() {
+  useSafeBack('/(tabs)/akun');
+
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');

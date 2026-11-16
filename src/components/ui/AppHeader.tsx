@@ -4,7 +4,7 @@ import { StyleSheet, View } from 'react-native';
 import { IconButton } from 'react-native-paper';
 
 import { AppText } from '@/components/ui/AppText';
-import { colors, layout } from '@/theme/tokens';
+import { colors, fonts, layout } from '@/theme/tokens';
 
 type Props = {
   title?: string;
@@ -44,12 +44,24 @@ export function AppHeader({
       ) : null}
       <View style={styles.titleWrap}>
         {title ? (
-          <AppText variant="titleLarge" numberOfLines={1}>
+          <AppText
+            variant="titleMedium"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
+            style={styles.titleText}
+          >
             {title}
           </AppText>
         ) : null}
         {subtitle ? (
-          <AppText variant="bodySmall" color={colors.muted} numberOfLines={1}>
+          <AppText
+            variant="bodySmall"
+            color={colors.muted}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+          >
             {subtitle}
           </AppText>
         ) : null}
@@ -79,6 +91,13 @@ const styles = StyleSheet.create({
     minWidth: 0,
     paddingLeft: 4,
     paddingVertical: 8,
+    justifyContent: 'center',
+  },
+  titleText: {
+    fontFamily: fonts.bold,
+    fontSize: 16.5,
+    lineHeight: 22,
+    color: colors.ink,
   },
   right: {
     marginLeft: 8,

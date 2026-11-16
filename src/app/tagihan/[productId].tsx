@@ -19,6 +19,7 @@ import { ErrorState, LoadingState } from '@/components/ui/States';
 import { TextField } from '@/components/ui/TextField';
 import { VariantRow } from '@/components/product/VariantRow';
 import { useBalance } from '@/hooks/useBalance';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { useCountdown } from '@/hooks/useCountdown';
 import { useProduct } from '@/hooks/useProduct';
 import { getErrorCode, getErrorMessage } from '@/lib/errors';
@@ -28,7 +29,7 @@ import {
   orderFingerprint,
   releaseOrderKey,
 } from '@/lib/idempotency';
-import { getBillVariants, getVariantFields } from '@/lib/products';
+import { cleanProductName, getBillVariants, getVariantFields } from '@/lib/products';
 import { colors, fonts, spacing } from '@/theme/tokens';
 
 const INQUIRY_ERRORS: Record<string, string> = {
@@ -63,6 +64,7 @@ const ORDER_ERRORS: Record<string, string> = {
 
 export default function BillInquiryScreen() {
   const params = useLocalSearchParams<{ productId?: string; variantId?: string }>();
+  useSafeBack(params.productId ? `/produk/${params.productId}` : '/(tabs)/katalog');
   const productId = params.productId || '';
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -188,7 +190,7 @@ export default function BillInquiryScreen() {
   return (
     <KeyboardScreen>
       <Screen padded>
-        <AppHeader title="Cek tagihan" subtitle={product.name} />
+        <AppHeader title="Cek tagihan" subtitle={cleanProductName(product.name)} />
 
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -230,7 +232,7 @@ export default function BillInquiryScreen() {
                   size={16}
                   color={colors.muted}
                 />
-                <AppText variant="bodyMedium">{selectedVariant.name}</AppText>
+                <AppText variant="bodyMedium">{cleanProductName(selectedVariant.name)}</AppText>
               </View>
             )}
           </SurfaceCard>

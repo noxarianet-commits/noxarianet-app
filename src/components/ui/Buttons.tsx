@@ -27,7 +27,7 @@ export function PrimaryButton({
       buttonColor={rest.buttonColor ?? colors.coralDark}
       textColor={rest.textColor ?? '#FFFFFF'}
       style={[
-        styles.base,
+        styles.primaryGlass,
         fullWidth ? styles.fullWidth : null,
         style,
       ]}
@@ -54,8 +54,34 @@ export function SecondaryButton({
       {...rest}
       textColor={rest.textColor ?? colors.coralDark}
       style={[
-        styles.base,
-        styles.outlined,
+        styles.secondaryGlass,
+        fullWidth ? styles.fullWidth : null,
+        style,
+      ]}
+      contentStyle={[styles.content, contentStyle]}
+      labelStyle={[styles.label, labelStyle]}
+      uppercase={false}
+    >
+      {children}
+    </Button>
+  );
+}
+
+export function GlassButton({
+  children,
+  fullWidth = true,
+  style,
+  contentStyle,
+  labelStyle,
+  ...rest
+}: Props) {
+  return (
+    <Button
+      mode="outlined"
+      {...rest}
+      textColor={rest.textColor ?? colors.coralDark}
+      style={[
+        styles.frostedGlass,
         fullWidth ? styles.fullWidth : null,
         style,
       ]}
@@ -96,15 +122,40 @@ export function TextButton({
 }
 
 const styles = StyleSheet.create({
-  base: {
-    borderRadius: radius.sm,
-  },
   fullWidth: {
     alignSelf: 'stretch',
   },
-  outlined: {
-    borderWidth: 1,
-    borderColor: colors.lineStrong,
+  primaryGlass: {
+    borderRadius: 16,
+    borderWidth: 1.2,
+    borderColor: 'rgba(255, 255, 255, 0.28)',
+    shadowColor: colors.coralDark,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.24,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+  secondaryGlass: {
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(77, 27, 140, 0.2)',
+    shadowColor: colors.coralDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  frostedGlass: {
+    borderRadius: 16,
+    backgroundColor: 'rgba(77, 27, 140, 0.08)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(77, 27, 140, 0.16)',
+    shadowColor: colors.coralDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 2,
   },
   content: {
     minHeight: 48,
@@ -117,7 +168,7 @@ const styles = StyleSheet.create({
     textTransform: 'none',
   },
   text: {
-    borderRadius: radius.sm,
+    borderRadius: radius.md,
   },
   textContent: {
     minHeight: 44,

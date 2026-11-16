@@ -8,7 +8,7 @@
       "android",
       "web"
     ],
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/android-icon-monochrome.png",
     "scheme": "noxarianet",
     "userInterfaceStyle": "light",
     "backgroundColor": "#F8F7FC",
@@ -16,16 +16,18 @@
       "package": "com.noxarianet.store",
       "versionCode": 1,
       "allowBackup": false,
-      "predictiveBackGestureEnabled": true,
       "permissions": [
         "RECEIVE_BOOT_COMPLETED",
         "VIBRATE",
-        "POST_NOTIFICATIONS"
+        "POST_NOTIFICATIONS",
+        "READ_MEDIA_IMAGES",
+        "WRITE_EXTERNAL_STORAGE",
+        "READ_EXTERNAL_STORAGE"
       ],
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#FFFFFF",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "foregroundImage": "./assets/images/android-icon-monochrome.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       }
     },
@@ -48,6 +50,16 @@
           "color": "#4D1B8C",
           "defaultChannel": "noxarianet_transaksi"
         }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Izinkan Noxarianet menyimpan gambar bukti struk transaksi ke galeri foto perangkat kamu.",
+          "savePhotosPermission": "Izinkan Noxarianet menyimpan gambar bukti struk transaksi ke galeri foto perangkat kamu.",
+          "granularPermissions": [
+            "photo"
+          ]
+        }
       ]
     ],
     "experiments": {
@@ -64,8 +76,9 @@
         }
       },
       "eas": {
-        "projectId": "bfedbf3c-01c9-401b-a6d0-3093378a92f2"
+        "projectId": "94e7a81a-e136-4089-847c-3d71f4765034"
       }
-    }
+    },
+    "owner": "noxarianets-team"
   }
 }

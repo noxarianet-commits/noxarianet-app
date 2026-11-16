@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { keepPreviousData, useInfiniteQuery } from '@tanstack/react-query';
 
 import { getProducts } from '@/api/mobile';
 import { queryKeys } from '@/api/queryKeys';
@@ -6,21 +6,23 @@ import { queryKeys } from '@/api/queryKeys';
 export type CatalogType = 'prepaid' | 'postpaid';
 
 export function useProducts(filters: {
-  search: string;
-  category: string;
+  search?: string;
+  category?: string;
   type: CatalogType;
 }) {
+  const search = filters.search?.trim() || '';
+
   return useInfiniteQuery({
-    queryKey: queryKeys.products(filters),
+    queryKey: queryKeys.products({ search, type: filters.type }),
     queryFn: ({ pageParam }) =>
       getProducts({
         type: filters.type,
-        category: filters.category === 'ALL' ? undefined : filters.category,
-        search: filters.search.trim() || undefined,
+        search: search || undefined,
         page: pageParam,
-        per_page: 50,
+        per_page: 100,
       }),
     initialPageParam: 1,
+    placeholderData: keepPreviousData,
     getNextPageParam: (lastPage) => {
       if (!lastPage) return undefined;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -44,9 +46,9 @@ export function useProducts(filters: {
         return currentPage < totalPages ? currentPage + 1 : undefined;
       }
 
-      // Jika data berupa array dan terisi penuh (50 item), coba ambil halaman berikutnya
+      // Jika data berupa array dan terisi penuh (100 item), coba ambil halaman berikutnya
       const items = pageData.data;
-      if (Array.isArray(items) && items.length >= 50 && typeof currentPage === 'number') {
+      if (Array.isArray(items) && items.length >= 100 && typeof currentPage === 'number') {
         return currentPage + 1;
       }
 

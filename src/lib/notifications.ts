@@ -109,6 +109,32 @@ export async function getNotificationPermissionStatus(): Promise<boolean> {
   }
 }
 
+/**
+ * Membersihkan seluruh embel-embel vendor pihak ketiga (OkeConnect, Sekalipay, Digiflazz, Apigames, VIP, dll.)
+ * dari teks notifikasi, baik dari title maupun body pesan.
+ */
+export function cleanNotificationVendorText(raw?: string | null): string {
+  if (!raw) return '';
+  return raw
+    // 1. Bersihkan bentuk dalam kurung: (OkeConnect), (Sekalipay), (Digiflazz), (Apigames), [Sekalipay], {OkeConnect}, dll.
+    .replace(/\s*[\(\[\{]\s*(oke\s*connect|sekali\s*pay|digi\s*flazz|api\s*games|vip)\s*[\)\]\}]/gi, '')
+    // 2. Bersihkan bentuk pemisah: " - OkeConnect", " : Sekalipay", " | Digiflazz", dll.
+    .replace(/\s*[-:|/]\s*(oke\s*connect|sekali\s*pay|digi\s*flazz|api\s*games|vip)\b/gi, '')
+    // 3. Bersihkan bentuk awalan: "Sekalipay - ", "(Sekalipay) ", "OkeConnect: "
+    .replace(/^[\(\[\{]?\s*(oke\s*connect|sekali\s*pay|digi\s*flazz|api\s*games|vip)\s*[\)\]\}]?\s*[-:|/]?\s*/gi, '')
+    // 4. Bersihkan kata mandiri: "OkeConnect", "Sekalipay", "Digiflazz"
+    .replace(/\b(oke\s*connect|sekali\s*pay|digi\s*flazz|api\s*games)\b/gi, '')
+    // 5. Bersihkan sisa kurung kosong: "()", "[]"
+    .replace(/\(\s*\)/g, '')
+    .replace(/\[\s*\]/g, '')
+    // 6. Bersihkan pemisah gantung di akhir atau awal teks
+    .replace(/\s*[-:|/]\s*$/, '')
+    .replace(/^\s*[-:|/]\s*/, '')
+    // 7. Rapikan spasi ganda
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
 async function triggerSystemNotification(
   title: string,
   body: string,
@@ -131,6 +157,28 @@ async function triggerSystemNotification(
   }
 }
 
+const recentNotificationHistory = new Map<string, number>();
+const DEDUPLICATION_WINDOW_MS = 6000; // 6 detik jendela anti-duplikasi
+
+function isDuplicateNotification(title: string, body: string): boolean {
+  const now = Date.now();
+  // Bersihkan riwayat lama (> 20 detik)
+  for (const [key, timestamp] of recentNotificationHistory.entries()) {
+    if (now - timestamp > 20000) {
+      recentNotificationHistory.delete(key);
+    }
+  }
+
+  const key = `${title.toLowerCase().trim()}|${body.toLowerCase().trim()}`;
+  const prevTime = recentNotificationHistory.get(key);
+  if (prevTime && now - prevTime < DEDUPLICATION_WINDOW_MS) {
+    return true; // Notifikasi kembar / duplikat, abaikan agar tidak double!
+  }
+
+  recentNotificationHistory.set(key, now);
+  return false;
+}
+
 /**
  * Tampilkan notifikasi ke pengguna.
  */
@@ -141,10 +189,44 @@ export function showNotification(options: {
   icon?: string;
   system?: boolean;
 }) {
+  let cleanTitle = cleanNotificationVendorText(options.title);
+  let cleanBody = cleanNotificationVendorText(options.body);
+
+  // Normalisasi judul "Transaksi Berhasil" & format sesuai permintaan user:
+  // "TRANSAKSI BERHASIL DANA (OkeConnect)" -> Title: "Transaksi Berhasil", Body: "DANA"
+  const successMatch = cleanTitle.match(/^transaksi\s+berhasil(?:\s*[:\-–|/]\s*|\s+)(.+)$/i);
+  if (successMatch) {
+    const extra = cleanNotificationVendorText(successMatch[1]);
+    cleanTitle = 'Transaksi Berhasil';
+    if (extra && (!cleanBody || cleanBody.toLowerCase().includes('berhasil'))) {
+      cleanBody = extra;
+    }
+  } else if (/^transaksi\s+berhasil$/i.test(cleanTitle.trim())) {
+    cleanTitle = 'Transaksi Berhasil';
+  }
+
+  // Normalisasi judul "Transaksi Gagal":
+  const failMatch = cleanTitle.match(/^transaksi\s+gagal(?:\s*[:\-–|/]\s*|\s+)(.+)$/i);
+  if (failMatch) {
+    const extra = cleanNotificationVendorText(failMatch[1]);
+    cleanTitle = 'Transaksi Gagal';
+    if (extra && (!cleanBody || cleanBody.toLowerCase().includes('gagal'))) {
+      cleanBody = `${extra} gagal diproses`;
+    }
+  } else if (/^transaksi\s+gagal$/i.test(cleanTitle.trim())) {
+    cleanTitle = 'Transaksi Gagal';
+  }
+
+  // Jaminan anti-duplikasi: Jika pesan yang sama dipicu berulang (misal dari polling & push notif sekaligus),
+  // cukup munculkan SATU kali saja agar tidak double.
+  if (isDuplicateNotification(cleanTitle, cleanBody)) {
+    return;
+  }
+
   const notification: AppNotification = {
     id: `notif-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-    title: options.title,
-    body: options.body,
+    title: cleanTitle,
+    body: cleanBody,
     tone: options.tone,
     icon: options.icon,
     timestamp: Date.now(),
@@ -161,7 +243,7 @@ export function showNotification(options: {
 
   // 2. Dispatch ke Android Status Bar / Notification Center jika module tersedia
   if (options.system !== false) {
-    void triggerSystemNotification(options.title, options.body);
+    void triggerSystemNotification(cleanTitle, cleanBody);
   }
 }
 
@@ -193,10 +275,18 @@ export function notifyTopupPending(amount: number) {
  * Notifikasi transaksi pesanan berhasil
  */
 export function notifyOrderSuccess(productName: string, variantName?: string) {
-  const item = variantName ? `${productName} (${variantName})` : productName;
+  const cleanProd = cleanNotificationVendorText(productName);
+  const cleanVar = variantName ? cleanNotificationVendorText(variantName) : '';
+  const item =
+    cleanVar && cleanVar.toLowerCase() !== cleanProd.toLowerCase()
+      ? cleanVar.toLowerCase().includes(cleanProd.toLowerCase())
+        ? cleanVar
+        : `${cleanProd} · ${cleanVar}`
+      : cleanProd || 'Produk';
+
   showNotification({
-    title: 'Transaksi Berhasil! 🎉',
-    body: `Pesanan ${item} telah selesai diproses.`,
+    title: 'Transaksi Berhasil',
+    body: `${item}`,
     tone: 'success',
     icon: 'check-circle-outline',
   });
@@ -206,10 +296,18 @@ export function notifyOrderSuccess(productName: string, variantName?: string) {
  * Notifikasi transaksi pesanan gagal / dibatalkan
  */
 export function notifyOrderFailed(productName: string, variantName?: string) {
-  const item = variantName ? `${productName} (${variantName})` : productName;
+  const cleanProd = cleanNotificationVendorText(productName);
+  const cleanVar = variantName ? cleanNotificationVendorText(variantName) : '';
+  const item =
+    cleanVar && cleanVar.toLowerCase() !== cleanProd.toLowerCase()
+      ? cleanVar.toLowerCase().includes(cleanProd.toLowerCase())
+        ? cleanVar
+        : `${cleanProd} · ${cleanVar}`
+      : cleanProd || 'Produk';
+
   showNotification({
-    title: 'Transaksi Gagal ❌',
-    body: `Pesanan ${item} gagal diproses atau dibatalkan.`,
+    title: 'Transaksi Gagal',
+    body: `${item} gagal diproses`,
     tone: 'danger',
     icon: 'alert-circle-outline',
   });

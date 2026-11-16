@@ -15,10 +15,13 @@ import { ErrorState, LoadingState } from '@/components/ui/States';
 import { UnderlineTabs } from '@/components/ui/Tabs';
 import { ProductArtwork } from '@/components/product/ProductArtwork';
 import { VariantRow } from '@/components/product/VariantRow';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { useProduct } from '@/hooks/useProduct';
 import { formatRupiah } from '@/lib/format';
 import {
   billVariantFee,
+  cleanProductName,
+  cleanServerName,
   getBillVariants,
   getProductServers,
   getServerVariants,
@@ -29,6 +32,8 @@ import {
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
 export default function ProductDetailScreen() {
+  useSafeBack('/(tabs)/katalog');
+
   const params = useLocalSearchParams<{ id?: string }>();
   const productQuery = useProduct(params.id);
   const insets = useSafeAreaInsets();
@@ -59,9 +64,9 @@ export default function ProductDetailScreen() {
 
   const serverItems = useMemo(
     () =>
-      servers.map((item) => ({
+      servers.map((item, idx) => ({
         key: item.vendor,
-        label: item.server_name || vendorLabel(item.vendor),
+        label: cleanServerName(item.server_name || item.vendor, idx),
       })),
     [servers],
   );
@@ -118,9 +123,12 @@ export default function ProductDetailScreen() {
         { icon: 'qrcode-scan', label: 'Bayar & selesai' },
       ] as const);
 
+  const cleanName = cleanProductName(product.name);
+  const cleanCat = cleanProductName(product.category);
+
   return (
     <Screen padded>
-      <AppHeader title="Detail produk" subtitle={product.category} />
+      <AppHeader title="Detail produk" subtitle={cleanCat} />
 
       <ScrollView
         showsVerticalScrollIndicator={false}
@@ -133,7 +141,7 @@ export default function ProductDetailScreen() {
           <View style={styles.heroCopy}>
             <View style={styles.brandRow}>
               <AppText variant="labelSmall" color={colors.coralDark}>
-                {product.category.toUpperCase()}
+                {cleanCat.toUpperCase()}
               </AppText>
               {isPostpaid ? (
                 <View style={styles.serverBadge}>
@@ -159,7 +167,15 @@ export default function ProductDetailScreen() {
                 </View>
               ) : null}
             </View>
-            <AppText variant="headlineMedium">{product.name}</AppText>
+            <AppText
+              variant="titleLarge"
+              style={styles.heroTitle}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.82}
+            >
+              {cleanName}
+            </AppText>
             {product.brand ? (
               <AppText variant="bodySmall" color={colors.muted}>
                 {product.brand}
@@ -194,7 +210,7 @@ export default function ProductDetailScreen() {
           <>
             <InfoBanner
               tone="info"
-              title="Nominal ditentukan vendor"
+              title="Nominal tagihan resmi"
               message="Masukkan nomor pelanggan atau ID meter untuk melihat nominal tagihan. Nominal tidak bisa diubah manual."
             />
 
@@ -250,7 +266,7 @@ export default function ProductDetailScreen() {
                   color={colors.muted}
                 />
                 <AppText variant="bodySmall" color={colors.muted}>
-                  {server.server_name || vendorLabel(server.vendor)}
+                  {cleanServerName(server.server_name || server.vendor, serverIndex)}
                 </AppText>
               </View>
             )}
@@ -286,6 +302,7 @@ export default function ProductDetailScreen() {
                 tone="info"
                 title="Catatan produk"
                 message={selectedVariant.note}
+                copyable
               />
             ) : null}
           </>
@@ -355,6 +372,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 3,
+  },
+  heroTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    lineHeight: 24,
+    color: colors.ink,
   },
   brandRow: {
     flexDirection: 'row',

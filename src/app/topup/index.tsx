@@ -15,16 +15,19 @@ import { KeyboardScreen, ScreenScroll } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TextField } from '@/components/ui/TextField';
 import { useBalance } from '@/hooks/useBalance';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
 import { formatDateTime, formatRupiah } from '@/lib/format';
 import { notifyTopupPending } from '@/lib/notifications';
 import { saveTopupInfo } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
-const PRESETS = [10000, 20000, 50000, 100000, 200000, 500000] as const;
-const MIN_TOPUP = 10000;
+const PRESETS = [1000, 10000, 20000, 50000, 100000, 200000] as const;
+const MIN_TOPUP = 1000;
 
 export default function TopupScreen() {
+  useSafeBack('/(tabs)');
+
   const queryClient = useQueryClient();
   const balanceQuery = useBalance();
   const pendingQuery = useQuery({

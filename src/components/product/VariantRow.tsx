@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import type { ProductVariant } from '@/api/types';
 import { AppText } from '@/components/ui/AppText';
 import { formatNumber, formatRupiah } from '@/lib/format';
+import { cleanProductName } from '@/lib/products';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
 export function VariantRow({
@@ -48,7 +49,7 @@ export function VariantRow({
 
       <View style={styles.copy}>
         <AppText variant="titleMedium" numberOfLines={2}>
-          {variant.name}
+          {cleanProductName(variant.name)}
         </AppText>
         <View style={styles.meta}>
           {openDenom ? (
@@ -72,59 +73,73 @@ export function VariantRow({
           )}
           {variant.note ? (
             <AppText variant="bodySmall" color={colors.muted} numberOfLines={1}>
-              {variant.note}
+              {cleanProductName(variant.note)}
             </AppText>
           ) : null}
         </View>
       </View>
 
-      <AppText
-        variant="bodyMedium"
-        weight="monoMedium"
-        color={outOfStock ? colors.muted : colors.ink}
-        style={styles.price}
-      >
-        {openDenom
-          ? 'Bebas'
-          : isBill
-            ? fee > 0
-              ? formatRupiah(fee)
-              : 'Cek'
-            : formatRupiah(variant.price)}
-      </AppText>
+      <View style={[styles.priceBadge, selected && styles.priceBadgeSelected]}>
+        <AppText
+          variant="bodyMedium"
+          weight="monoMedium"
+          color={outOfStock ? colors.muted : selected ? colors.coralDark : colors.ink}
+          style={styles.price}
+        >
+          {openDenom
+            ? 'Bebas'
+            : isBill
+              ? fee > 0
+                ? formatRupiah(fee)
+                : 'Cek'
+              : formatRupiah(variant.price)}
+        </AppText>
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: {
-    minHeight: 64,
+    minHeight: 68,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.md,
     paddingVertical: spacing.md,
     paddingHorizontal: spacing.md,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm,
+    backgroundColor: 'rgba(255, 255, 255, 0.88)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(231, 226, 241, 0.85)',
+    borderRadius: 16,
+    shadowColor: '#4D1B8C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   selected: {
-    borderColor: colors.coral,
-    backgroundColor: colors.coralSoft,
+    borderColor: colors.coralDark,
+    backgroundColor: 'rgba(244, 238, 253, 0.95)',
+    borderWidth: 1.5,
+    shadowColor: '#4D1B8C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 3,
   },
   disabled: {
-    opacity: 0.55,
+    opacity: 0.5,
   },
   pressed: {
-    opacity: 0.75,
+    opacity: 0.8,
   },
   radio: {
-    width: 20,
-    height: 20,
-    borderRadius: radius.pill,
-    borderWidth: 1.5,
-    borderColor: colors.lineStrong,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.8,
+    borderColor: 'rgba(164, 151, 185, 0.5)',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -140,10 +155,22 @@ const styles = StyleSheet.create({
   meta: {
     gap: 1,
   },
+  priceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 10,
+    backgroundColor: 'rgba(244, 242, 248, 0.7)',
+    borderWidth: 1,
+    borderColor: 'rgba(231, 226, 241, 0.6)',
+    alignItems: 'flex-end',
+  },
+  priceBadgeSelected: {
+    backgroundColor: 'rgba(77, 27, 140, 0.08)',
+    borderColor: 'rgba(77, 27, 140, 0.2)',
+  },
   price: {
     fontFamily: fonts.monoMedium,
     fontSize: 13,
     textAlign: 'right',
-    flexShrink: 0,
   },
 });

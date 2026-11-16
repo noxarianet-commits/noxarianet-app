@@ -6,6 +6,7 @@ import { AppText } from '@/components/ui/AppText';
 import { InfoBanner } from '@/components/ui/InfoBanner';
 import { ScreenScroll } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { useHome } from '@/hooks/useHome';
 import {
   supportWhatsAppNumber,
@@ -14,6 +15,8 @@ import {
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
 export default function SupportScreen() {
+  useSafeBack('/(tabs)');
+
   const homeQuery = useHome();
   const settings = homeQuery.data?.settings;
   const whatsappUrl = supportWhatsAppUrl(settings);
@@ -148,13 +151,16 @@ export default function SupportScreen() {
         <View style={styles.securityBox}>
           <MaterialCommunityIcons
             name="shield-check-outline"
-            size={15}
+            size={14}
             color={colors.muted}
             style={styles.securityIcon}
           />
           <AppText
             variant="bodySmall"
             color={colors.muted}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.82}
             style={styles.securityText}
           >
             CS tidak pernah meminta password atau kode OTP akunmu.
@@ -257,7 +263,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    paddingHorizontal: spacing.xs,
   },
   securityBox: {
     flexDirection: 'row',
@@ -266,13 +271,15 @@ const styles = StyleSheet.create({
     gap: 6,
     maxWidth: '100%',
     alignSelf: 'center',
+    paddingHorizontal: spacing.xs,
   },
   securityIcon: {
     flexShrink: 0,
   },
   securityText: {
-    fontSize: 11.5,
+    fontSize: 11,
     lineHeight: 16,
+    letterSpacing: -0.1,
     color: colors.muted,
     textAlign: 'center',
     flexShrink: 1,

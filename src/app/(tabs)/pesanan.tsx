@@ -15,6 +15,7 @@ import { AppText } from '@/components/ui/AppText';
 import { Screen } from '@/components/ui/Screen';
 import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { FilterChips } from '@/components/ui/Tabs';
+import { TopCurvedHeader } from '@/components/ui/TopCurvedHeader';
 import { useTabBackToHome } from '@/hooks/useBackHandler';
 import { useOrders } from '@/hooks/useOrders';
 import {
@@ -22,6 +23,7 @@ import {
   fonts,
   layout,
   orderStatusFilters,
+  radius,
   spacing,
 } from '@/theme/tokens';
 
@@ -37,24 +39,39 @@ export default function OrdersScreen() {
   );
 
   const renderItem: ListRenderItem<Order> = ({ item }) => (
-    <OrderRow
-      order={item}
-      onPress={() =>
-        router.push({
-          pathname: '/pesanan/[id]',
-          params: { id: item.id },
-        })
-      }
-    />
+    <View style={styles.itemWrapper}>
+      <OrderRow
+        order={item}
+        onPress={() =>
+          router.push({
+            pathname: '/pesanan/[id]',
+            params: { id: item.id },
+          })
+        }
+      />
+    </View>
   );
 
+  const totalCount =
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ordersQuery.data?.pages[0] as any)?.meta?.total ??
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ordersQuery.data?.pages[0] as any)?.pagination?.total ??
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (ordersQuery.data?.pages[0] as any)?.total ??
+    orders.length;
+
   return (
-    <Screen edges={['top', 'left', 'right']}>
+    <Screen
+      edges={['left', 'right']}
+      safeStyle={{ backgroundColor: colors.coral }}
+      style={styles.screenBody}
+    >
       <FlatList
         data={orders}
         keyExtractor={(item) => item.id}
         renderItem={renderItem}
-        contentContainerStyle={styles.list}
+        contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.45}
         onEndReached={() => {
@@ -74,69 +91,54 @@ export default function OrdersScreen() {
           />
         }
         ListHeaderComponent={
-          <View style={styles.header}>
-            <View style={styles.titleRow}>
-              <View style={styles.titleCopy}>
-                <AppText variant="labelSmall" color={colors.coralDark}>
-                  RIWAYAT TRANSAKSI
-                </AppText>
-                <AppText variant="headlineLarge">Pesanan kamu</AppText>
-              </View>
-              <AppText variant="labelSmall" color={colors.muted} style={styles.totalBadge}>
-                {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                {(ordersQuery.data?.pages[0] as any)?.meta?.total ??
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (ordersQuery.data?.pages[0] as any)?.pagination?.total ??
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                  (ordersQuery.data?.pages[0] as any)?.total ??
-                  orders.length}{' '}
-                TOTAL
-              </AppText>
-            </View>
-
-            <AppText variant="bodyMedium" color={colors.muted}>
-              Pantau status top up dan pembelian digitalmu di sini.
-            </AppText>
-
-            <FilterChips
-              items={orderStatusFilters}
-              value={status}
-              onChange={setStatus}
-              style={styles.filtersScroll}
-              contentContainerStyle={styles.filtersContent}
+          <View style={styles.headerBlock}>
+            <TopCurvedHeader
+              title="Pesanan"
+              badge={`${totalCount} Pesanan`}
             />
+            <View style={styles.filterSection}>
+              <FilterChips
+                items={orderStatusFilters}
+                value={status}
+                onChange={setStatus}
+                style={styles.filtersScroll}
+                contentContainerStyle={styles.filtersContent}
+              />
+            </View>
           </View>
         }
         ListEmptyComponent={
-          ordersQuery.isPending ? (
-            <LoadingState label="Memuat pesanan…" />
-          ) : ordersQuery.isError ? (
-            <ErrorState
-              error={ordersQuery.error}
-              title="Pesanan gagal dimuat"
-              onRetry={() => void ordersQuery.refetch()}
-            />
-          ) : (
-            <EmptyState
-              icon="receipt-text-outline"
-              title={
-                status === 'ALL'
-                  ? 'Belum ada pesanan'
-                  : 'Tidak ada pesanan di filter ini'
-              }
-              description={
-                status === 'ALL'
-                  ? 'Semua transaksi yang kamu buat akan muncul di sini.'
-                  : 'Coba pilih status lain untuk melihat pesanan lainnya.'
-              }
-              actionLabel={status === 'ALL' ? 'Mulai belanja' : 'Lihat semua'}
-              onAction={() =>
-                status === 'ALL'
-                  ? router.push('/(tabs)/katalog')
-                  : setStatus('ALL')
-              }
-            />
-          )
+          <View style={styles.emptyWrapper}>
+            {ordersQuery.isPending ? (
+              <LoadingState label="Memuat pesanan…" />
+            ) : ordersQuery.isError ? (
+              <ErrorState
+                error={ordersQuery.error}
+                title="Pesanan gagal dimuat"
+                onRetry={() => void ordersQuery.refetch()}
+              />
+            ) : (
+              <EmptyState
+                icon="receipt-text-outline"
+                title={
+                  status === 'ALL'
+                    ? 'Belum ada pesanan'
+                    : 'Tidak ada pesanan di filter ini'
+                }
+                description={
+                  status === 'ALL'
+                    ? 'Semua transaksi yang kamu buat akan muncul di sini.'
+                    : 'Coba pilih status lain untuk melihat pesanan lainnya.'
+                }
+                actionLabel={status === 'ALL' ? 'Mulai belanja' : 'Lihat semua'}
+                onAction={() =>
+                  status === 'ALL'
+                    ? router.push('/(tabs)/katalog')
+                    : setStatus('ALL')
+                }
+              />
+            )}
+          </View>
         }
         ListFooterComponent={
           ordersQuery.isFetchingNextPage ? (
@@ -160,38 +162,40 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
-  list: {
-    paddingHorizontal: layout.screenPadding,
+  screenBody: {
+    flex: 1,
+    backgroundColor: colors.paper,
+  },
+  headerBlock: {
+    backgroundColor: colors.paper,
+    marginBottom: spacing.xs,
+  },
+  filterSection: {
+    paddingTop: spacing.sm + 4,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.paper,
+  },
+  listContent: {
     paddingBottom: 32,
     flexGrow: 1,
+    backgroundColor: colors.paper,
   },
-  header: {
-    paddingTop: spacing.sm,
-    paddingBottom: spacing.sm,
-    gap: spacing.base,
+  itemWrapper: {
+    paddingHorizontal: layout.screenPadding,
   },
-  titleRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: spacing.md,
-  },
-  titleCopy: {
-    flex: 1,
-    minWidth: 0,
-    gap: spacing.xs,
-  },
-  totalBadge: {
-    flexShrink: 0,
+  emptyWrapper: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.lg,
   },
   filtersScroll: {
-    marginHorizontal: -layout.screenPadding,
+    marginHorizontal: 0,
   },
   filtersContent: {
     paddingHorizontal: layout.screenPadding,
   },
   footer: {
     paddingVertical: spacing.lg,
+    paddingHorizontal: layout.screenPadding,
     fontFamily: fonts.regular,
   },
 });

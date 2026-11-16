@@ -1,9 +1,10 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, Dialog, Portal } from 'react-native-paper';
 
 import type { HomeCategory } from '@/api/types';
@@ -24,6 +25,7 @@ import { useDoubleBackToExit } from '@/hooks/useBackHandler';
 import { useHome } from '@/hooks/useHome';
 import { useMe } from '@/hooks/useMe';
 import { firstName } from '@/lib/format';
+import { cleanProductName } from '@/lib/products';
 import { dismissInfoModal, shouldShowInfoModal } from '@/lib/storage';
 import { colors, fonts, layout, radius, spacing } from '@/theme/tokens';
 
@@ -37,6 +39,7 @@ export default function HomeScreen() {
   useDoubleBackToExit();
 
   const [infoVisible, setInfoVisible] = useState(false);
+  const [modalCopied, setModalCopied] = useState(false);
 
   const profile = meQuery.data ?? user;
   const home = homeQuery.data;
@@ -109,8 +112,15 @@ export default function HomeScreen() {
         <StatusBar style="light" />
         <View style={styles.heroSection}>
           <HomeTopBar
-            onNotification={() => setInfoVisible(true)}
+            onNotification={() => {
+              if (settings?.info_modal_text) {
+                setInfoVisible(true);
+              } else {
+                router.push('/informasi');
+              }
+            }}
             onChat={() => router.push('/bantuan')}
+            hasNotification={Boolean(settings?.info_modal_text)}
           />
         </View>
         <View style={styles.bodyContent}>
@@ -138,13 +148,25 @@ export default function HomeScreen() {
         {/* BRImo-style Purple Hero Section */}
         <View style={styles.heroSection}>
           <HomeTopBar
-            onNotification={() => setInfoVisible(true)}
+            onNotification={() => {
+              if (settings?.info_modal_text) {
+                setInfoVisible(true);
+              } else {
+                router.push('/informasi');
+              }
+            }}
             onChat={() => router.push('/bantuan')}
             hasNotification={Boolean(settings?.info_modal_text)}
           />
 
           <View style={styles.greeting}>
-            <AppText variant="headlineSmall" style={styles.greetingTitle}>
+            <AppText
+              variant="headlineSmall"
+              style={styles.greetingTitle}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
               Halo, {firstName(profile?.display_name) || 'Pengguna'}
             </AppText>
           </View>
@@ -162,6 +184,7 @@ export default function HomeScreen() {
           ) : null}
 
           <BalanceCard
+            key="balance-card-clean"
             balance={balanceQuery.data?.balance ?? profile?.balance ?? 0}
             limit={balanceQuery.data?.balance_limit ?? profile?.balance_limit}
             onTopup={() => router.push('/topup')}
@@ -337,29 +360,117 @@ export default function HomeScreen() {
           onDismiss={dismissInfo}
           style={styles.dialog}
         >
-          <Dialog.Title style={styles.dialogTitle}>Informasi</Dialog.Title>
-          <Dialog.Content style={styles.dialogContent}>
+          {/* Header Dialog */}
+          <View style={styles.dialogHeader}>
+            <View style={styles.dialogHeaderTitleRow}>
+              <View style={styles.dialogHeaderIconBadge}>
+                <MaterialCommunityIcons name="bullhorn-outline" size={18} color={colors.coral} />
+              </View>
+              <AppText variant="titleMedium" style={styles.dialogTitle}>
+                Informasi
+              </AppText>
+            </View>
+            <Pressable
+              onPress={dismissInfo}
+              hitSlop={12}
+              style={({ pressed }) => [styles.dialogCloseBtn, pressed && styles.pressed]}
+              accessibilityRole="button"
+              accessibilityLabel="Tutup"
+            >
+              <MaterialCommunityIcons name="close" size={18} color={colors.muted} />
+            </Pressable>
+          </View>
+
+          {/* Scrollable Content */}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            style={styles.dialogScrollArea}
+            contentContainerStyle={styles.dialogContent}
+          >
             {settings?.info_modal_image ? (
-              <Image
-                source={{ uri: settings.info_modal_image }}
-                style={styles.dialogImage}
-                contentFit="cover"
-              />
+              <View style={styles.dialogImageWrap}>
+                <Image
+                  source={{ uri: settings.info_modal_image }}
+                  style={styles.dialogImage}
+                  contentFit="contain"
+                />
+              </View>
             ) : null}
-            <AppText variant="bodyMedium" color={colors.muted}>
+            <AppText variant="bodyMedium" selectable style={styles.dialogBodyText}>
               {settings?.info_modal_text}
             </AppText>
-          </Dialog.Content>
-          <Dialog.Actions>
-            <Button
+          </ScrollView>
+
+          {/* Responsive Action Buttons */}
+          <View style={styles.dialogActionsWrap}>
+            {/* Secondary Row: Salin & Lihat Semua */}
+            <View style={styles.actionSecondaryRow}>
+              {settings?.info_modal_text ? (
+                <Pressable
+                  onPress={async () => {
+                    try {
+                      await Clipboard.setStringAsync(settings.info_modal_text || '');
+                      setModalCopied(true);
+                      Alert.alert(
+                        'Teks Disalin',
+                        'Isi pengumuman berhasil disalin ke clipboard perangkatmu.',
+                        [{ text: 'OK' }],
+                      );
+                      setTimeout(() => setModalCopied(false), 2500);
+                    } catch {}
+                  }}
+                  style={({ pressed }) => [
+                    styles.actionSecondaryBtn,
+                    modalCopied && styles.actionSecondaryBtnSuccess,
+                    pressed && styles.actionBtnPressed,
+                  ]}
+                  accessibilityRole="button"
+                >
+                  <MaterialCommunityIcons
+                    name={modalCopied ? 'check-circle' : 'content-copy'}
+                    size={15}
+                    color={modalCopied ? colors.teal : colors.coral}
+                  />
+                  <AppText
+                    variant="labelMedium"
+                    color={modalCopied ? colors.teal : colors.coral}
+                    numberOfLines={1}
+                  >
+                    {modalCopied ? 'Tersalin' : 'Salin Teks'}
+                  </AppText>
+                </Pressable>
+              ) : null}
+
+              <Pressable
+                onPress={() => {
+                  dismissInfo();
+                  router.push('/informasi');
+                }}
+                style={({ pressed }) => [styles.actionSecondaryBtn, pressed && styles.actionBtnPressed]}
+                accessibilityRole="button"
+              >
+                <MaterialCommunityIcons
+                  name="newspaper-variant-outline"
+                  size={15}
+                  color={colors.inkSoft}
+                />
+                <AppText variant="labelMedium" color={colors.inkSoft} numberOfLines={1}>
+                  Lihat Semua
+                </AppText>
+              </Pressable>
+            </View>
+
+            {/* Primary Full Width Button: Mengerti */}
+            <Pressable
               onPress={dismissInfo}
-              uppercase={false}
-              textColor={colors.coralDark}
-              labelStyle={{ fontFamily: fonts.semiBold }}
+              style={({ pressed }) => [styles.actionPrimaryBtn, pressed && styles.actionBtnPressed]}
+              accessibilityRole="button"
             >
-              Mengerti
-            </Button>
-          </Dialog.Actions>
+              <AppText variant="labelLarge" style={styles.actionPrimaryText}>
+                Mengerti
+              </AppText>
+            </Pressable>
+          </View>
         </Dialog>
       </Portal>
     </>
@@ -405,7 +516,7 @@ function HomeTopBar({
         <Pressable
           onPress={onNotification}
           accessibilityRole="button"
-          accessibilityLabel="Notifikasi"
+          accessibilityLabel="Pusat Informasi & Pengumuman"
           style={({ pressed }) => [styles.actionBtn, pressed && styles.pressed]}
         >
           <MaterialCommunityIcons
@@ -436,16 +547,13 @@ function BillCategoryCard({
       <View style={styles.billIcon}>
         <MaterialCommunityIcons
           name="receipt-text-outline"
-          size={20}
+          size={18}
           color={colors.teal}
         />
       </View>
       <View style={styles.billCopy}>
-        <AppText variant="titleSmall" numberOfLines={2}>
-          {category.name}
-        </AppText>
-        <AppText variant="bodySmall" color={colors.muted}>
-          {category.product_count} tagihan
+        <AppText variant="titleSmall" numberOfLines={1}>
+          {cleanProductName(category.name)}
         </AppText>
       </View>
     </Pressable>
@@ -469,16 +577,13 @@ function CategoryCard({
         <RemoteArtwork
           uri={category.icon}
           label={category.name}
-          size={24}
+          size={26}
           cornerRadius={0}
           style={styles.categoryImage}
         />
       </View>
       <AppText variant="labelMedium" numberOfLines={2} style={styles.categoryName}>
-        {category.name}
-      </AppText>
-      <AppText variant="labelSmall" color={colors.muted} style={styles.categoryCount}>
-        {category.product_count} produk
+        {cleanProductName(category.name)}
       </AppText>
     </Pressable>
   );
@@ -585,9 +690,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   greetingTitle: {
-    fontFamily: fonts.extraBold,
-    fontSize: 22,
-    lineHeight: 28,
+    fontFamily: fonts.bold,
+    fontSize: 18,
+    lineHeight: 24,
     color: '#FFFFFF',
   },
 
@@ -624,65 +729,64 @@ const styles = StyleSheet.create({
     gap: spacing.md,
   },
   categoryRow: {
-    gap: spacing.sm,
+    gap: spacing.md,
     paddingRight: spacing.base,
+    paddingVertical: 2,
   },
   categoryCard: {
-    width: 92,
-    minHeight: 112,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.md,
-    padding: spacing.sm + 2,
-    gap: 3,
+    width: 72,
     alignItems: 'center',
+    gap: 6,
   },
   categoryIcon: {
-    width: 38,
-    height: 38,
-    borderRadius: radius.pill,
-    backgroundColor: colors.surfaceMuted,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3EEFA',
+    borderWidth: 1,
+    borderColor: '#E8DEF8',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    shadowColor: colors.coralDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   categoryImage: {
-    width: 24,
-    height: 24,
+    width: 26,
+    height: 26,
   },
   categoryName: {
     fontFamily: fonts.semiBold,
-    fontSize: 12,
+    fontSize: 11.5,
+    lineHeight: 15,
     textAlign: 'center',
-    minHeight: 32,
-  },
-  categoryCount: {
-    fontSize: 10,
-    textAlign: 'center',
+    color: colors.ink,
+    minHeight: 30,
   },
   billCard: {
-    width: 148,
+    minWidth: 120,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
     backgroundColor: colors.tealSoft,
     borderWidth: 1,
     borderColor: '#C4E2D8',
-    borderRadius: radius.md,
-    padding: spacing.sm + 2,
+    borderRadius: radius.pill,
+    paddingVertical: spacing.xs + 2,
+    paddingHorizontal: spacing.md,
   },
   billIcon: {
-    width: 32,
-    height: 32,
+    width: 28,
+    height: 28,
     borderRadius: radius.pill,
     backgroundColor: colors.surface,
     alignItems: 'center',
     justifyContent: 'center',
   },
   billCopy: {
-    flex: 1,
-    gap: 1,
+    flexShrink: 1,
   },
   grid: {
     flexDirection: 'row',
@@ -749,20 +853,129 @@ const styles = StyleSheet.create({
     marginTop: spacing.xs,
   },
   dialog: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.xl,
+    maxWidth: 420,
+    width: '92%',
+    marginHorizontal: 0,
+    alignSelf: 'center',
+    padding: 0,
+    overflow: 'hidden',
+    elevation: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+  },
+  dialogHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.base,
+    paddingTop: spacing.base,
+    paddingBottom: spacing.sm,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.line,
+  },
+  dialogHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  dialogHeaderIconBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: radius.pill,
+    backgroundColor: colors.coralSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   dialogTitle: {
     fontFamily: fonts.bold,
+    fontSize: 17,
     color: colors.ink,
+    flex: 1,
+  },
+  dialogCloseBtn: {
+    width: 30,
+    height: 30,
+    borderRadius: radius.pill,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceMuted,
+  },
+  dialogScrollArea: {
+    maxHeight: 380,
   },
   dialogContent: {
+    padding: spacing.base,
     gap: spacing.md,
+  },
+  dialogImageWrap: {
+    width: '100%',
+    borderRadius: radius.md,
+    overflow: 'hidden',
+    backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   dialogImage: {
     width: '100%',
-    height: 160,
-    borderRadius: radius.sm,
+    aspectRatio: 16 / 9,
+    maxHeight: 190,
+  },
+  dialogBodyText: {
+    color: colors.inkSoft,
+    lineHeight: 22,
+    fontSize: 14,
+  },
+  dialogActionsWrap: {
+    padding: spacing.base,
+    paddingTop: spacing.sm,
+    gap: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+    backgroundColor: '#FFFFFF',
+  },
+  actionSecondaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  actionSecondaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.sm,
+    borderRadius: radius.pill,
     backgroundColor: colors.surfaceMuted,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  actionSecondaryBtnSuccess: {
+    backgroundColor: colors.tealSoft,
+    borderColor: colors.teal,
+  },
+  actionPrimaryBtn: {
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.md,
+    borderRadius: radius.pill,
+    backgroundColor: colors.coral,
+    elevation: 2,
+  },
+  actionPrimaryText: {
+    color: '#FFFFFF',
+    fontFamily: fonts.bold,
+    fontSize: 15,
+  },
+  actionBtnPressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.98 }],
   },
 });

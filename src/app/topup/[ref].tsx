@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
 import { cancelTopup, getPendingTopup, getTopupStatus } from '@/api/balance';
@@ -26,6 +26,7 @@ import { getErrorMessage, isRateLimited } from '@/lib/errors';
 import { formatCountdown, formatRupiah } from '@/lib/format';
 import { notifyTopupSuccess } from '@/lib/notifications';
 import { pollDelay, RATE_LIMIT_POLL_DELAY } from '@/lib/polling';
+import { saveQrisToGallery } from '@/lib/qris';
 import { loadTopupInfo } from '@/lib/storage';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
@@ -40,17 +41,33 @@ export default function TopupDetailScreen() {
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [wasCancelled, setWasCancelled] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [downloadingQris, setDownloadingQris] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qrCaptureRef = useRef<any>(null);
 
-  useHardwareBackPress(() => {
+  const handleDownloadQris = async () => {
+    setDownloadingQris(true);
+    try {
+      await saveQrisToGallery(qrCaptureRef);
+    } finally {
+      setDownloadingQris(false);
+    }
+  };
+
+  const handleBack = () => {
     if (cancelVisible) {
       setCancelVisible(false);
-      return true;
+      return;
     }
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/(tabs)');
     }
+  };
+
+  useHardwareBackPress(() => {
+    handleBack();
     return true;
   });
 
@@ -127,11 +144,16 @@ export default function TopupDetailScreen() {
   const expired = countdown.expired && !!expiresAt;
   const balanceAfter = record?.balance_after;
   const previousStatusRef = useRef<string | null>(null);
+  const notifiedTopupRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (status === 'completed') {
-      // Hanya kirim notifikasi jika sebelumnya statusnya pending dan baru saja selesai live
-      if (previousStatusRef.current === 'pending') {
+    if (status === 'completed' && ref) {
+      // Jaminan anti-double: Hanya kirim notifikasi 1 kali per referensi topup
+      if (
+        !notifiedTopupRef.current.has(ref) &&
+        previousStatusRef.current === 'pending'
+      ) {
+        notifiedTopupRef.current.add(ref);
         notifyTopupSuccess(amount || total);
       }
       void queryClient.invalidateQueries({ queryKey: ['balance'] });
@@ -139,7 +161,7 @@ export default function TopupDetailScreen() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.topupPending });
     }
     previousStatusRef.current = status;
-  }, [amount, queryClient, status, total]);
+  }, [amount, queryClient, ref, status, total]);
 
   const copyRef = async () => {
     await Clipboard.setStringAsync(ref);
@@ -203,7 +225,7 @@ export default function TopupDetailScreen() {
   if (effectiveStatus === 'completed') {
     return (
       <ScreenScroll>
-        <AppHeader title="Top up saldo" subtitle={ref} />
+        <AppHeader title="Top up saldo" subtitle={ref} onBack={handleBack} />
         <View style={styles.result}>
           <View style={[styles.resultIcon, styles.successIcon]}>
             <MaterialCommunityIcons
@@ -244,7 +266,7 @@ export default function TopupDetailScreen() {
   if (effectiveStatus === 'cancelled' || effectiveStatus === 'failed') {
     return (
       <ScreenScroll>
-        <AppHeader title="Top up saldo" subtitle={ref} />
+        <AppHeader title="Top up saldo" subtitle={ref} onBack={handleBack} />
         <View style={styles.result}>
           <View style={[styles.resultIcon, styles.failIcon]}>
             <MaterialCommunityIcons
@@ -309,13 +331,15 @@ export default function TopupDetailScreen() {
           </AppText>
 
           {qrLink ? (
-            <View style={[styles.qrBox, expired && styles.qrBoxExpired]}>
-              <Image
-                source={{ uri: qrLink }}
-                style={styles.qrImage}
-                contentFit="contain"
-                transition={200}
-              />
+            <View ref={qrCaptureRef as any} collapsable={false} style={styles.qrCaptureWrapper}>
+              <View style={[styles.qrBox, expired && styles.qrBoxExpired]}>
+                <Image
+                  source={{ uri: qrLink }}
+                  style={styles.qrImage}
+                  contentFit="contain"
+                  transition={200}
+                />
+              </View>
             </View>
           ) : (
             <View style={styles.qrEmpty}>
@@ -325,6 +349,29 @@ export default function TopupDetailScreen() {
               </AppText>
             </View>
           )}
+
+          {qrLink && !expired ? (
+            <Pressable
+              onPress={() => void handleDownloadQris()}
+              disabled={downloadingQris}
+              accessibilityRole="button"
+              accessibilityLabel="Unduh Kode QRIS"
+              style={({ pressed }) => [
+                styles.downloadBtn,
+                pressed && styles.pressed,
+                downloadingQris && styles.downloadBtnDisabled,
+              ]}
+            >
+              <MaterialCommunityIcons
+                name="download-circle-outline"
+                size={18}
+                color={colors.coralDark}
+              />
+              <AppText variant="labelMedium" color={colors.coralDark} style={styles.downloadBtnText}>
+                {downloadingQris ? 'Menyimpan QRIS…' : 'Unduh / Simpan Kode QRIS'}
+              </AppText>
+            </Pressable>
+          ) : null}
 
           <View style={styles.amountBox}>
             <AppText variant="labelSmall" color={colors.muted}>
@@ -422,6 +469,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  qrCaptureWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   qrBox: {
     width: 248,
     height: 248,
@@ -433,6 +486,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: spacing.sm,
+  },
+  downloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.pill,
+    backgroundColor: colors.coralSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 74, 0.25)',
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  downloadBtnDisabled: {
+    opacity: 0.6,
+  },
+  downloadBtnText: {
+    fontFamily: fonts.medium,
+  },
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
   },
   qrBoxExpired: {
     opacity: 0.35,

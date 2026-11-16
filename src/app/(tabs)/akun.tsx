@@ -11,6 +11,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
 import { ListRow } from '@/components/ui/ListRow';
 import { ScreenScroll } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
+import { TopCurvedHeader } from '@/components/ui/TopCurvedHeader';
 import { useAppConfig } from '@/hooks/useAppConfig';
 import { useTabBackToHome } from '@/hooks/useBackHandler';
 import { useHome } from '@/hooks/useHome';
@@ -21,7 +22,7 @@ import {
   notifyCustomMessage,
 } from '@/lib/notifications';
 import { supportWhatsAppNumber, supportWhatsAppUrl } from '@/lib/settings';
-import { colors, fonts, radius, spacing } from '@/theme/tokens';
+import { colors, fonts, layout, radius, spacing } from '@/theme/tokens';
 
 export default function AccountScreen() {
   const { user, signOut } = useAuth();
@@ -62,7 +63,7 @@ export default function AccountScreen() {
     setLoggingOut(true);
     try {
       await signOut();
-      router.replace('/');
+      router.replace('/(auth)/login');
     } finally {
       setLoggingOut(false);
       setLogoutVisible(false);
@@ -81,16 +82,18 @@ export default function AccountScreen() {
 
   return (
     <>
-      <ScreenScroll>
-        {/* Clean Header */}
-        <View style={styles.header}>
-          <AppText variant="headlineMedium" style={styles.pageTitle}>
-            Profil Saya
-          </AppText>
-        </View>
+      <ScreenScroll
+        padded={false}
+        edges={['left', 'right']}
+        safeStyle={{ backgroundColor: colors.coral }}
+        style={styles.screenScroll}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <TopCurvedHeader title="Profil Saya" />
 
-        {/* Clean Profile Identity Card */}
-        <SurfaceCard style={styles.profileCard}>
+        <View style={styles.bodyContent}>
+          {/* Clean Profile Identity Card */}
+          <SurfaceCard style={styles.profileCard}>
           <View style={styles.profileRow}>
             <Avatar name={profile?.display_name} size={58} />
             <View style={styles.profileInfo}>
@@ -269,6 +272,7 @@ export default function AccountScreen() {
             Versi {version}
           </AppText>
         </View>
+        </View>
       </ScreenScroll>
 
       <ConfirmDialog
@@ -286,17 +290,19 @@ export default function AccountScreen() {
 }
 
 const styles = StyleSheet.create({
-  header: {
-    paddingTop: spacing.xs,
-    paddingBottom: spacing.xs,
+  screenScroll: {
+    backgroundColor: colors.paper,
   },
-  pageTitle: {
-    fontFamily: fonts.bold,
-    fontSize: 24,
-    color: colors.ink,
+  scrollContent: {
+    backgroundColor: colors.paper,
+    flexGrow: 1,
+  },
+  bodyContent: {
+    paddingHorizontal: layout.screenPadding,
+    paddingTop: spacing.base,
+    paddingBottom: 40,
   },
   profileCard: {
-    marginTop: spacing.md,
     borderRadius: radius.lg,
     padding: spacing.base,
     borderWidth: 1,

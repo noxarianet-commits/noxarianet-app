@@ -27,7 +27,13 @@ export function SectionHeader({
           </AppText>
         ) : null}
         {title ? (
-          <AppText variant="titleLarge" numberOfLines={1}>
+          <AppText
+            variant="titleMedium"
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.85}
+            style={styles.title}
+          >
             {title}
           </AppText>
         ) : null}
@@ -58,6 +64,12 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
     gap: 2,
+  },
+  title: {
+    fontFamily: fonts.bold,
+    fontSize: 16.5,
+    lineHeight: 22,
+    color: colors.ink,
   },
   action: {
     flexShrink: 0,

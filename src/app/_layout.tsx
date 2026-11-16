@@ -9,10 +9,10 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import * as Application from 'expo-application';
 import { useFonts } from 'expo-font';
 import { NavigationBar } from 'expo-navigation-bar';
-import { SplashScreen, Stack, ThemeProvider } from 'expo-router';
+import { SplashScreen, Stack, ThemeProvider, router, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Alert, BackHandler, Platform, StyleSheet, ToastAndroid, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { ActivityIndicator, PaperProvider } from 'react-native-paper';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -36,6 +36,71 @@ void SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   useEffect(() => {
     void initNotifications();
+
+    if (Platform.OS !== 'android') return;
+
+    let lastExitPress = 0;
+    let isAlertActive = false;
+
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      // 1. Coba mundur jika stack navigasi memiliki histori layar sebelumnya
+      if (router.canGoBack()) {
+        router.back();
+        return true;
+      }
+
+      // 2. Jika berada di root/beranda: periksa jeda klik ganda
+      const now = Date.now();
+      if (now - lastExitPress < 2000) {
+        BackHandler.exitApp();
+        return true;
+      }
+
+      lastExitPress = now;
+
+      try {
+        ToastAndroid.show(
+          'Tekan sekali lagi untuk keluar dari aplikasi',
+          ToastAndroid.SHORT,
+        );
+      } catch {}
+
+      // Tampilkan Alert Dialog modal resmi agar tidak terlewat di HP Xiaomi/Samsung
+      if (!isAlertActive) {
+        isAlertActive = true;
+        Alert.alert(
+          'Keluar dari Aplikasi?',
+          'Tekan sekali lagi atau pilih Keluar untuk menutup aplikasi Noxarianet.',
+          [
+            {
+              text: 'Batal',
+              style: 'cancel',
+              onPress: () => {
+                isAlertActive = false;
+              },
+            },
+            {
+              text: 'Keluar',
+              style: 'destructive',
+              onPress: () => {
+                isAlertActive = false;
+                BackHandler.exitApp();
+              },
+            },
+          ],
+          {
+            cancelable: true,
+            onDismiss: () => {
+              isAlertActive = false;
+            },
+          },
+        );
+      }
+
+      return true;
+    });
+
+    return () => subscription.remove();
   }, []);
 
   return (
@@ -131,11 +196,25 @@ function BootstrapGate() {
 }
 
 function RootNavigator() {
-  const { session } = useAuth();
+  const { session, status } = useAuth();
+  const segments = useSegments();
 
   // Plumbung push notification: daftarkan token saat login, buka layar
   // terkait saat notifikasi disadap.
   usePushNotifications();
+
+  // Pengarah otomatis: saat logout / sesi habis, arahkan ke login secara mulus
+  useEffect(() => {
+    if (status === 'loading') return;
+
+    const inAuthGroup = segments[0] === '(auth)';
+
+    if (!session && !inAuthGroup) {
+      router.replace('/(auth)/login');
+    } else if (session && inAuthGroup) {
+      router.replace('/(tabs)');
+    }
+  }, [session, status, segments]);
 
   return (
     <Stack
@@ -146,26 +225,20 @@ function RootNavigator() {
       }}
     >
       <Stack.Screen name="index" />
-
-      <Stack.Protected guard={!!session}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="produk/[id]" />
-        <Stack.Screen name="checkout/[productId]" />
-        <Stack.Screen name="tagihan/[productId]" />
-        <Stack.Screen name="pembayaran/[orderId]" />
-        <Stack.Screen name="pesanan/[id]" />
-        <Stack.Screen name="topup/index" />
-        <Stack.Screen name="topup/[ref]" />
-        <Stack.Screen name="saldo/riwayat" />
-        <Stack.Screen name="profil/edit" />
-        <Stack.Screen name="profil/password" />
-        <Stack.Screen name="bantuan" />
-      </Stack.Protected>
-
-      <Stack.Protected guard={!session}>
-        <Stack.Screen name="(auth)" />
-      </Stack.Protected>
-
+      <Stack.Screen name="(auth)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+      <Stack.Screen name="produk/[id]" />
+      <Stack.Screen name="checkout/[productId]" />
+      <Stack.Screen name="tagihan/[productId]" />
+      <Stack.Screen name="pembayaran/[orderId]" />
+      <Stack.Screen name="pesanan/[id]" />
+      <Stack.Screen name="topup/index" />
+      <Stack.Screen name="topup/[ref]" />
+      <Stack.Screen name="saldo/riwayat" />
+      <Stack.Screen name="profil/edit" />
+      <Stack.Screen name="profil/password" />
+      <Stack.Screen name="bantuan" />
+      <Stack.Screen name="informasi" />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

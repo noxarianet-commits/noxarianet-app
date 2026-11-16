@@ -23,6 +23,7 @@ import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { ErrorState, LoadingState } from '@/components/ui/States';
 import { TextField } from '@/components/ui/TextField';
 import { useAppConfig } from '@/hooks/useAppConfig';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { useBalance } from '@/hooks/useBalance';
 import { useProduct } from '@/hooks/useProduct';
 import { getErrorMessage, getErrorCode } from '@/lib/errors';
@@ -33,6 +34,8 @@ import {
   releaseOrderKey,
 } from '@/lib/idempotency';
 import {
+  cleanProductName,
+  cleanServerName,
   findVariant,
   getVariantFields,
   isOpenDenom,
@@ -61,6 +64,8 @@ export default function CheckoutScreen() {
     variantId?: string;
     vendor?: string;
   }>();
+
+  useSafeBack(params.productId ? `/produk/${params.productId}` : '/(tabs)/katalog');
   const productQuery = useProduct(params.productId);
   const balanceQuery = useBalance();
 
@@ -367,12 +372,20 @@ function CheckoutForm({
           <View style={styles.productRow}>
             <View style={styles.productCopy}>
               <AppText variant="labelSmall" color={colors.coralDark}>
-                {product.category.toUpperCase()}
+                {cleanProductName(product.category).toUpperCase()}
               </AppText>
-              <AppText variant="titleLarge">{product.name}</AppText>
+              <AppText
+                variant="titleLarge"
+                style={styles.productTitle}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+              >
+                {cleanProductName(product.name)}
+              </AppText>
               <AppText variant="bodySmall" color={colors.muted}>
-                {variant.name}
-                {server.server_name ? ` · ${server.server_name}` : ''}
+                {cleanProductName(variant.name)}
+                {server.server_name ? ` · ${cleanServerName(server.server_name)}` : ''}
               </AppText>
             </View>
             <View style={styles.priceTag}>
@@ -545,8 +558,8 @@ function CheckoutForm({
             <AppText variant="labelSmall" color={colors.muted} style={styles.eyebrow}>
               RINGKASAN
             </AppText>
-            <ReceiptRow label="Produk" value={product.name} />
-            <ReceiptRow label="Nominal" value={variant.name} />
+            <ReceiptRow label="Produk" value={cleanProductName(product.name)} />
+            <ReceiptRow label="Nominal" value={cleanProductName(variant.name)} />
             {targetKey && fields[targetKey] ? (
               <ReceiptRow label="Tujuan" value={fields[targetKey]} mono />
             ) : null}
@@ -679,22 +692,38 @@ const styles = StyleSheet.create({
   },
   productRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.base,
     marginTop: spacing.xs,
+    padding: spacing.base,
+    backgroundColor: 'rgba(255, 255, 255, 0.92)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(231, 226, 241, 0.9)',
+    borderRadius: 18,
+    shadowColor: '#4D1B8C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   productCopy: {
     flex: 1,
     minWidth: 0,
     gap: 2,
   },
+  productTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 17,
+    lineHeight: 23,
+    color: colors.ink,
+  },
   priceTag: {
     alignItems: 'flex-end',
-    gap: 1,
-    backgroundColor: colors.surface,
+    gap: 2,
+    backgroundColor: 'rgba(244, 238, 253, 0.8)',
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.sm,
+    borderColor: 'rgba(77, 27, 140, 0.15)',
+    borderRadius: 14,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     flexShrink: 0,
@@ -702,9 +731,19 @@ const styles = StyleSheet.create({
   priceTagValue: {
     fontFamily: fonts.monoMedium,
     fontSize: 14,
+    color: colors.coralDark,
   },
   sectionCard: {
     gap: spacing.md,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderWidth: 1.2,
+    borderColor: 'rgba(231, 226, 241, 0.85)',
+    shadowColor: '#4D1B8C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 1,
   },
   eyebrow: {
     letterSpacing: 1.2,
@@ -723,14 +762,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.md,
     padding: spacing.md,
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: colors.line,
-    backgroundColor: colors.paper,
+    borderRadius: 16,
+    borderWidth: 1.2,
+    borderColor: 'rgba(231, 226, 241, 0.85)',
+    backgroundColor: 'rgba(248, 246, 252, 0.6)',
   },
   paymentSelected: {
-    borderColor: colors.coral,
-    backgroundColor: colors.coralSoft,
+    borderColor: colors.coralDark,
+    backgroundColor: 'rgba(244, 238, 253, 0.95)',
+    borderWidth: 1.5,
+    shadowColor: '#4D1B8C',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 2,
   },
   paymentDisabled: {
     opacity: 0.6,
@@ -739,10 +784,10 @@ const styles = StyleSheet.create({
     opacity: 0.75,
   },
   paymentIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surface,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    backgroundColor: 'rgba(77, 27, 140, 0.08)',
     alignItems: 'center',
     justifyContent: 'center',
   },

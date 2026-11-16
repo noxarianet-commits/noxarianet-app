@@ -1,5 +1,6 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { colors, fonts, spacing } from '@/theme/tokens';
@@ -29,6 +30,20 @@ export function ReceiptRow({
   const resolvedColor =
     valueColor ?? (highlight ? colors.coralDark : colors.ink);
 
+  const handleCopy = async () => {
+    if (value) {
+      await Clipboard.setStringAsync(value);
+    }
+    if (onCopy) {
+      onCopy();
+    }
+    Alert.alert(
+      'Berhasil Disalin! 📋',
+      `${label} berhasil disalin ke clipboard:\n\n${value}`,
+      [{ text: 'OK', style: 'default' }],
+    );
+  };
+
   const content = (
     <View style={styles.valueRow}>
       <AppText
@@ -42,12 +57,13 @@ export function ReceiptRow({
         {value}
       </AppText>
       {copyable ? (
-        <MaterialCommunityIcons
-          name="content-copy"
-          size={14}
-          color={colors.muted}
-          style={styles.copyIcon}
-        />
+        <View style={styles.copyBadge}>
+          <MaterialCommunityIcons
+            name="content-copy"
+            size={13}
+            color={colors.coralDark}
+          />
+        </View>
       ) : null}
     </View>
   );
@@ -57,12 +73,16 @@ export function ReceiptRow({
       <AppText variant="bodySmall" color={colors.muted} style={styles.label}>
         {label}
       </AppText>
-      {copyable && onCopy ? (
+      {copyable ? (
         <Pressable
-          onPress={onCopy}
+          onPress={handleCopy}
           accessibilityRole="button"
           accessibilityLabel={`Salin ${label}`}
-          style={styles.pressableValue}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.pressableValue,
+            pressed && styles.pressedValue,
+          ]}
         >
           {content}
         </Pressable>
@@ -77,9 +97,9 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     gap: spacing.base,
-    paddingVertical: 5,
+    paddingVertical: 7,
   },
   label: {
     flexShrink: 0,
@@ -93,19 +113,29 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  pressedValue: {
+    opacity: 0.65,
+  },
   valueRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-end',
-    gap: 4,
+    gap: 6,
   },
   value: {
     flexShrink: 1,
     textAlign: 'right',
   },
-  copyIcon: {
+  copyBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: 'rgba(77, 27, 140, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(77, 27, 140, 0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
     flexShrink: 0,
-    marginLeft: 2,
   },
   mono: {
     fontFamily: fonts.monoMedium,

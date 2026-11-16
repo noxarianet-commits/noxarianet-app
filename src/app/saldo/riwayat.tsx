@@ -17,6 +17,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/components/ui/States';
 import { FilterChips } from '@/components/ui/Tabs';
 import { useBalance } from '@/hooks/useBalance';
 import { useBalanceHistory } from '@/hooks/useBalanceHistory';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { formatDate, formatRupiah } from '@/lib/format';
 import { colors, fonts, layout, spacing } from '@/theme/tokens';
 
@@ -41,6 +42,8 @@ const TYPE_META: Record<
 };
 
 export default function BalanceHistoryScreen() {
+  useSafeBack('/(tabs)');
+
   const [type, setType] = useState('ALL');
   const balanceQuery = useBalance();
   const historyQuery = useBalanceHistory(type);

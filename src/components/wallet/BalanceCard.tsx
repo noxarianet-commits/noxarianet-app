@@ -1,7 +1,14 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  View,
+  type StyleProp,
+  type ViewStyle,
+} from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { formatRupiah } from '@/lib/format';
@@ -23,6 +30,29 @@ export function BalanceCard({
   style?: StyleProp<ViewStyle>;
 }) {
   const [visible, setVisible] = useState(true);
+  const blinkAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.timing(blinkAnim, {
+          toValue: 0.25,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+        Animated.timing(blinkAnim, {
+          toValue: 1,
+          duration: 750,
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    pulse.start();
+
+    return () => {
+      pulse.stop();
+    };
+  }, [blinkAnim]);
 
   useEffect(() => {
     let mounted = true;
@@ -55,20 +85,13 @@ export function BalanceCard({
       {/* Top Header: Brand Name & Status */}
       <View style={styles.topRow}>
         <View style={styles.brandWrap}>
-          <View style={styles.iconCircle}>
-            <MaterialCommunityIcons
-              name="wallet-outline"
-              size={13}
-              color="#FFFFFF"
-            />
-          </View>
           <AppText style={styles.brandTitle} numberOfLines={1}>
             Saldo Noxarianet
           </AppText>
         </View>
 
         <View style={styles.statusPill}>
-          <View style={styles.liveDot} />
+          <Animated.View style={[styles.liveDot, { opacity: blinkAnim }]} />
           <AppText style={styles.statusText}>SALDO AKTIF</AppText>
         </View>
       </View>
@@ -176,50 +199,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: spacing.sm,
+    gap: spacing.md,
   },
   brandWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
     flex: 1,
     minWidth: 0,
-  },
-  iconCircle: {
-    width: 24,
-    height: 24,
-    borderRadius: radius.pill,
-    backgroundColor: 'rgba(255, 255, 255, 0.18)',
     justifyContent: 'center',
-    alignItems: 'center',
-    flexShrink: 0,
   },
   brandTitle: {
     fontFamily: fonts.bold,
     fontSize: 15,
     color: '#FFFFFF',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingVertical: 2,
-    paddingHorizontal: 7,
+    gap: 5,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
     borderRadius: radius.pill,
     backgroundColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.16)',
     flexShrink: 0,
   },
   liveDot: {
-    width: 5,
-    height: 5,
-    borderRadius: 2.5,
+    width: 6,
+    height: 6,
+    borderRadius: 3,
     backgroundColor: '#00E676',
+    shadowColor: '#00E676',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.8,
+    shadowRadius: 3,
+    elevation: 2,
   },
   statusText: {
     fontFamily: fonts.semiBold,
     fontSize: 9,
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: 'rgba(255, 255, 255, 0.9)',
     letterSpacing: 0.8,
   },
 

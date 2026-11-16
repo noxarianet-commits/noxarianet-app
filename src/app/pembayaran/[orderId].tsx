@@ -4,7 +4,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ActivityIndicator } from 'react-native-paper';
 
 import { cancelOrder } from '@/api/mobile';
@@ -26,6 +26,8 @@ import { getErrorMessage, isRateLimited } from '@/lib/errors';
 import { formatCountdown, formatRupiah } from '@/lib/format';
 import { notifyOrderFailed, notifyOrderSuccess } from '@/lib/notifications';
 import { pollDelay, RATE_LIMIT_POLL_DELAY } from '@/lib/polling';
+import { cleanProductName } from '@/lib/products';
+import { saveQrisToGallery } from '@/lib/qris';
 import { loadPaymentInfo } from '@/lib/storage';
 import {
   colors,
@@ -45,13 +47,36 @@ export default function PaymentScreen() {
   const [cancelling, setCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [downloadingQris, setDownloadingQris] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const qrCaptureRef = useRef<any>(null);
 
-  useHardwareBackPress(() => {
+  const handleDownloadQris = async () => {
+    setDownloadingQris(true);
+    try {
+      await saveQrisToGallery(qrCaptureRef);
+    } finally {
+      setDownloadingQris(false);
+    }
+  };
+
+  const handleBack = () => {
     if (cancelVisible) {
       setCancelVisible(false);
       return true;
     }
-    router.replace('/(tabs)/pesanan');
+    if (router.canGoBack()) {
+      router.back();
+    } else if (orderId) {
+      router.replace({ pathname: '/pesanan/[id]', params: { id: orderId } });
+    } else {
+      router.replace('/(tabs)/pesanan');
+    }
+    return true;
+  };
+
+  useHardwareBackPress(() => {
+    handleBack();
     return true;
   });
 
@@ -106,14 +131,17 @@ export default function PaymentScreen() {
     0;
 
   const previousStatusRef = useRef<string | null>(null);
+  const notifiedOrdersRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (status && isFinalOrderStatus(status)) {
-      // Hanya kirim notifikasi jika sebelumnya PENDING/PROCESSING dan baru saja selesai live
+    if (status && isFinalOrderStatus(status) && orderId) {
+      // Jaminan anti-double: Hanya kirim notifikasi 1 kali per orderId saat transisi live
       if (
+        !notifiedOrdersRef.current.has(orderId) &&
         previousStatusRef.current &&
         !isFinalOrderStatus(previousStatusRef.current)
       ) {
+        notifiedOrdersRef.current.add(orderId);
         if (status === 'COMPLETED') {
           notifyOrderSuccess(order?.product || 'Pesanan', order?.variant);
         } else if (status === 'FAILED' || status === 'CANCELLED') {
@@ -167,12 +195,12 @@ export default function PaymentScreen() {
       <ScreenScroll>
         <AppHeader
           title="Pembayaran"
-          onBack={() => router.replace('/(tabs)/pesanan')}
+          onBack={handleBack}
         />
         <ErrorState
           error={new Error('Nomor pesanan tidak ditemukan.')}
           title="Pesanan tidak valid"
-          onRetry={() => router.replace('/(tabs)/pesanan')}
+          onRetry={handleBack}
           retryLabel="Ke riwayat pesanan"
         />
       </ScreenScroll>
@@ -185,7 +213,7 @@ export default function PaymentScreen() {
         <AppHeader
           title="Pembayaran"
           subtitle={orderId}
-          onBack={() => router.replace('/(tabs)/pesanan')}
+          onBack={handleBack}
         />
         <LoadingState label="Memeriksa status pembayaran…" />
       </ScreenScroll>
@@ -198,7 +226,7 @@ export default function PaymentScreen() {
         <AppHeader
           title="Pembayaran"
           subtitle={orderId}
-          onBack={() => router.replace('/(tabs)/pesanan')}
+          onBack={handleBack}
         />
         <ErrorState
           error={statusQuery.error}
@@ -261,9 +289,7 @@ export default function PaymentScreen() {
         <AppHeader
           title="Pembayaran"
           subtitle={orderId}
-          onBack={() =>
-            router.replace({ pathname: '/pesanan/[id]', params: { id: orderId } })
-          }
+          onBack={handleBack}
         />
 
         {statusQuery.isError ? (
@@ -298,13 +324,15 @@ export default function PaymentScreen() {
               </AppText>
 
               {qrLink ? (
-                <View style={[styles.qrBox, expired && styles.qrBoxExpired]}>
-                  <Image
-                    source={{ uri: qrLink }}
-                    style={styles.qrImage}
-                    contentFit="contain"
-                    transition={200}
-                  />
+                <View ref={qrCaptureRef as any} collapsable={false} style={styles.qrCaptureWrapper}>
+                  <View style={[styles.qrBox, expired && styles.qrBoxExpired]}>
+                    <Image
+                      source={{ uri: qrLink }}
+                      style={styles.qrImage}
+                      contentFit="contain"
+                      transition={200}
+                    />
+                  </View>
                 </View>
               ) : (
                 <View style={styles.qrEmpty}>
@@ -314,6 +342,29 @@ export default function PaymentScreen() {
                   </AppText>
                 </View>
               )}
+
+              {qrLink && !expired ? (
+                <Pressable
+                  onPress={() => void handleDownloadQris()}
+                  disabled={downloadingQris}
+                  accessibilityRole="button"
+                  accessibilityLabel="Unduh Kode QRIS"
+                  style={({ pressed }) => [
+                    styles.downloadBtn,
+                    pressed && styles.pressed,
+                    downloadingQris && styles.downloadBtnDisabled,
+                  ]}
+                >
+                  <MaterialCommunityIcons
+                    name="download-circle-outline"
+                    size={18}
+                    color={colors.coralDark}
+                  />
+                  <AppText variant="labelMedium" color={colors.coralDark} style={styles.downloadBtnText}>
+                    {downloadingQris ? 'Menyimpan QRIS…' : 'Unduh / Simpan Kode QRIS'}
+                  </AppText>
+                </Pressable>
+              ) : null}
 
               <View style={styles.amountBox}>
                 <AppText variant="labelSmall" color={colors.muted}>
@@ -363,7 +414,10 @@ export default function PaymentScreen() {
                 value="QRIS"
               />
               {order?.variant ? (
-                <ReceiptRow label="Produk" value={`${order.product} · ${order.variant}`} />
+                <ReceiptRow
+                  label="Produk"
+                  value={`${cleanProductName(order.product)} · ${cleanProductName(order.variant)}`}
+                />
               ) : null}
               <View style={styles.copyRow}>
                 <TextButton
@@ -408,7 +462,13 @@ export default function PaymentScreen() {
                 size={14}
                 color={colors.muted}
               />
-              <AppText variant="bodySmall" color={colors.muted}>
+              <AppText
+                variant="bodySmall"
+                color={colors.muted}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.85}
+              >
                 Status dicek otomatis setiap beberapa detik.
               </AppText>
             </View>
@@ -490,7 +550,13 @@ function ResultView({
       <AppHeader
         title="Pembayaran"
         subtitle={orderId}
-        onBack={() => router.replace('/(tabs)/pesanan')}
+        onBack={() => {
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            router.replace('/(tabs)/pesanan');
+          }
+        }}
       />
       <View style={styles.result}>
         <View style={[styles.resultIcon, { backgroundColor: palette.bg }]}>
@@ -530,6 +596,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.sm,
   },
+  qrCaptureWrapper: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   qrBox: {
     width: 248,
     height: 248,
@@ -541,6 +613,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: spacing.sm,
+  },
+  downloadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.base,
+    borderRadius: radius.pill,
+    backgroundColor: colors.coralSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 107, 74, 0.25)',
+    marginTop: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  downloadBtnDisabled: {
+    opacity: 0.6,
+  },
+  downloadBtnText: {
+    fontFamily: fonts.medium,
+  },
+  pressed: {
+    opacity: 0.8,
+    transform: [{ scale: 0.98 }],
   },
   qrBoxExpired: {
     opacity: 0.35,

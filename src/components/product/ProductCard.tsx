@@ -1,17 +1,11 @@
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { Pressable, StyleSheet, View } from 'react-native';
 
 import type { Product } from '@/api/types';
 import { ProductArtwork } from '@/components/product/ProductArtwork';
 import { AppText } from '@/components/ui/AppText';
-import { formatRupiah, truncate } from '@/lib/format';
-import { isPostpaidProduct } from '@/lib/products';
+import { truncate } from '@/lib/format';
+import { cleanProductName } from '@/lib/products';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
-
-const VENDOR_LABELS: Record<string, string> = {
-  sekalipay: 'Server 1',
-  okeconnect: 'Server 2',
-};
 
 export function ProductCard({
   product,
@@ -22,84 +16,49 @@ export function ProductCard({
   onPress: () => void;
   serverCount?: number;
 }) {
-  const variants = product.variants || [];
-  const postpaid = isPostpaidProduct(product);
-  const openDenom = variants.some(
-    (variant) => variant.provider_meta?.open_denom,
-  );
-  const prices = variants
-    .filter((variant) => !variant.provider_meta?.open_denom)
-    .map((variant) => variant.price)
-    .filter((price) => Number.isFinite(price) && price > 0);
-  const fromPrice = prices.length ? Math.min(...prices) : null;
-  const vendorLabel = postpaid
-    ? 'Tagihan'
-    : VENDOR_LABELS[product.vendor || ''] || 'Katalog';
   const totalServers = serverCount || product.servers?.length || 0;
+  const cleanName = cleanProductName(product.name);
+  const cleanCat = cleanProductName(product.category);
 
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${product.name}, ${product.category}`}
+      accessibilityLabel={`${cleanName}, ${cleanCat}`}
       style={({ pressed }) => [styles.card, pressed && styles.pressed]}
     >
-      <View style={styles.media}>
-        <ProductArtwork product={product} size={38} />
+      <View style={styles.iconContainer}>
+        <ProductArtwork product={product} size={28} cornerRadius={6} />
       </View>
 
-      <View style={styles.metaRow}>
-        <AppText variant="labelSmall" color={colors.muted} numberOfLines={1}>
-          {vendorLabel.toUpperCase()}
+      <View style={styles.content}>
+        <AppText
+          variant="titleSmall"
+          numberOfLines={2}
+          ellipsizeMode="tail"
+          style={styles.name}
+        >
+          {cleanName}
         </AppText>
-        {totalServers > 1 && !postpaid ? (
-          <View style={styles.serverBadge}>
-            <AppText variant="labelSmall" color={colors.coralInk} style={styles.serverText}>
-              {totalServers} SERVER
-            </AppText>
-          </View>
-        ) : null}
-        {postpaid && variants.length ? (
-          <View style={styles.serverBadge}>
-            <AppText variant="labelSmall" color={colors.coralInk} style={styles.serverText}>
-              {variants.length} PILIHAN
-            </AppText>
-          </View>
-        ) : null}
-      </View>
 
-      <AppText variant="titleMedium" numberOfLines={2} style={styles.name}>
-        {truncate(product.name, 46)}
-      </AppText>
-      <AppText variant="bodySmall" color={colors.muted} numberOfLines={1}>
-        {product.category}
-      </AppText>
-
-      <View style={styles.footer}>
-        <View style={styles.priceWrap}>
-          <AppText variant="labelSmall" color={colors.muted}>
-            {postpaid ? 'TAGIHAN' : openDenom ? 'NOMINAL' : 'MULAI'}
-          </AppText>
+        <View style={styles.metaRow}>
           <AppText
-            variant="bodyMedium"
-            color={colors.ink}
-            style={styles.price}
+            variant="labelSmall"
+            color={colors.muted}
             numberOfLines={1}
+            ellipsizeMode="tail"
+            style={styles.category}
           >
-            {postpaid
-              ? 'Cek tagihan'
-              : openDenom
-                ? 'Bebas'
-                : fromPrice !== null
-                  ? formatRupiah(fromPrice)
-                  : 'Lihat detail'}
+            {cleanCat}
           </AppText>
+          {totalServers > 1 ? (
+            <View style={styles.serverBadge}>
+              <AppText variant="labelSmall" style={styles.serverText}>
+                {totalServers} Server
+              </AppText>
+            </View>
+          ) : null}
         </View>
-        <MaterialCommunityIcons
-          name="arrow-top-right"
-          size={18}
-          color={colors.coralDark}
-        />
       </View>
     </Pressable>
   );
@@ -112,57 +71,68 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.line,
     borderRadius: radius.md,
-    padding: spacing.sm + 2,
-    gap: 2,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
   pressed: {
     opacity: 0.72,
   },
-  media: {
-    height: 54,
-    borderRadius: radius.sm,
-    backgroundColor: colors.surfaceMuted,
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F3EEFA',
+    borderWidth: 1,
+    borderColor: '#E8DEF8',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
-    overflow: 'hidden',
+    shadowColor: colors.coralDark,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  content: {
+    alignItems: 'center',
+    width: '100%',
+    gap: 2,
+  },
+  name: {
+    fontFamily: fonts.semiBold,
+    fontSize: 11.5,
+    lineHeight: 15.5,
+    textAlign: 'center',
+    color: colors.ink,
+    minHeight: 31,
+    flexShrink: 1,
+    width: '100%',
   },
   metaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
     gap: 4,
+    marginTop: 1,
+    maxWidth: '100%',
+  },
+  category: {
+    fontSize: 10,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   serverBadge: {
     backgroundColor: colors.coralSoft,
     borderRadius: radius.pill,
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 1,
   },
   serverText: {
-    fontSize: 8,
-    lineHeight: 12,
-  },
-  name: {
-    minHeight: 38,
-    fontSize: 13,
-    lineHeight: 18,
-  },
-  footer: {
-    marginTop: 'auto',
-    paddingTop: spacing.xs,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    justifyContent: 'space-between',
-    gap: spacing.xs,
-  },
-  priceWrap: {
-    flex: 1,
-    minWidth: 0,
-    gap: 1,
-  },
-  price: {
-    fontFamily: fonts.monoMedium,
-    fontSize: 13,
+    fontSize: 9,
+    color: colors.coralDark,
+    fontFamily: fonts.medium,
   },
 });

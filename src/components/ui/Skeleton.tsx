@@ -121,11 +121,9 @@ export function CatalogGridSkeleton() {
     <View style={styles.catalogGrid}>
       {Array.from({ length: 6 }).map((_, index) => (
         <View key={index} style={styles.catalogItem}>
-          <Skeleton width="100%" height={56} borderRadius={radius.sm} />
-          <Skeleton width="40%" height={10} borderRadius={3} style={styles.mt8} />
-          <Skeleton width="85%" height={14} borderRadius={4} style={styles.mt6} />
-          <Skeleton width="60%" height={11} borderRadius={3} style={styles.mt4} />
-          <Skeleton width="50%" height={14} borderRadius={4} style={styles.mt8} />
+          <Skeleton width={48} height={48} borderRadius={24} />
+          <Skeleton width="75%" height={13} borderRadius={4} style={styles.mt8} />
+          <Skeleton width="45%" height={10} borderRadius={3} style={styles.mt4} />
         </View>
       ))}
     </View>
@@ -266,11 +264,14 @@ const styles = StyleSheet.create({
   catalogItem: {
     width: '48.5%',
     backgroundColor: colors.surface,
-    padding: spacing.sm + 2,
+    paddingVertical: spacing.sm + 2,
+    paddingHorizontal: spacing.xs,
     borderRadius: radius.md,
     borderWidth: 1,
     borderColor: colors.line,
     marginBottom: spacing.sm,
+    alignItems: 'center',
+    gap: 4,
   },
 
   // Home Skeleton
@@ -323,13 +324,9 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   categoryBox: {
-    width: 92,
-    minHeight: 110,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    borderWidth: 1,
-    borderColor: colors.line,
-    padding: spacing.sm,
+    width: 72,
+    backgroundColor: 'transparent',
     alignItems: 'center',
+    gap: 6,
   },
 });

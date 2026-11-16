@@ -1,6 +1,8 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Clipboard from 'expo-clipboard';
 import type { ComponentProps, ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 import { AppText } from '@/components/ui/AppText';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
@@ -46,6 +48,8 @@ type Props = {
   icon?: IconName;
   action?: ReactNode;
   style?: object;
+  copyable?: boolean;
+  copyText?: string;
 };
 
 export function InfoBanner({
@@ -55,8 +59,24 @@ export function InfoBanner({
   icon,
   action,
   style,
+  copyable = false,
+  copyText,
 }: Props) {
   const palette = TONES[tone];
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    const textToCopy = copyText || message || title || '';
+    if (!textToCopy) return;
+
+    try {
+      await Clipboard.setStringAsync(textToCopy);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Ignore clipboard error
+    }
+  };
 
   return (
     <View
@@ -77,13 +97,14 @@ export function InfoBanner({
       />
       <View style={styles.copy}>
         {title ? (
-          <AppText variant="titleSmall" style={{ color: palette.fg }}>
+          <AppText variant="titleSmall" style={{ color: palette.fg }} selectable>
             {title}
           </AppText>
         ) : null}
         {message ? (
           <AppText
             variant="bodySmall"
+            selectable
             style={[styles.message, { color: palette.fg }]}
           >
             {message}
@@ -91,6 +112,33 @@ export function InfoBanner({
         ) : null}
         {action ? <View style={styles.action}>{action}</View> : null}
       </View>
+
+      {copyable ? (
+        <Pressable
+          onPress={() => void handleCopy()}
+          accessibilityRole="button"
+          accessibilityLabel="Salin Teks"
+          style={({ pressed }) => [
+            styles.copyBtn,
+            copied && styles.copyBtnDone,
+            pressed && styles.pressed,
+          ]}
+        >
+          <MaterialCommunityIcons
+            name={copied ? 'check' : 'content-copy'}
+            size={12}
+            color={copied ? '#155724' : palette.fg}
+          />
+          <AppText
+            style={[
+              styles.copyBtnText,
+              { color: copied ? '#155724' : palette.fg },
+            ]}
+          >
+            {copied ? 'Tersalin' : 'Salin'}
+          </AppText>
+        </Pressable>
+      ) : null}
     </View>
   );
 }
@@ -103,6 +151,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.sm,
     padding: spacing.md,
     alignItems: 'flex-start',
+    position: 'relative',
   },
   icon: {
     marginTop: 1,
@@ -119,5 +168,30 @@ const styles = StyleSheet.create({
   },
   action: {
     marginTop: spacing.xs,
+  },
+  copyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.08)',
+    alignSelf: 'flex-start',
+    marginLeft: spacing.xs,
+  },
+  copyBtnDone: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#C8E6C9',
+  },
+  copyBtnText: {
+    fontFamily: fonts.semiBold,
+    fontSize: 10.5,
+    letterSpacing: 0.3,
+  },
+  pressed: {
+    opacity: 0.7,
   },
 });

@@ -15,10 +15,13 @@ import { KeyboardScreen, ScreenScroll } from '@/components/ui/Screen';
 import { SurfaceCard } from '@/components/ui/SurfaceCard';
 import { TextField } from '@/components/ui/TextField';
 import { useMe } from '@/hooks/useMe';
+import { useSafeBack } from '@/hooks/useBackHandler';
 import { getErrorMessage } from '@/lib/errors';
 import { colors, fonts, radius, spacing } from '@/theme/tokens';
 
 export default function EditProfileScreen() {
+  useSafeBack('/(tabs)/akun');
+
   const queryClient = useQueryClient();
   const { user, setUser } = useAuth();
   const meQuery = useMe();

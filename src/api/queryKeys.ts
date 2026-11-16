@@ -3,8 +3,8 @@ export const queryKeys = {
   me: ['me'] as const,
   home: ['home'] as const,
   products: (filters: {
-    search: string;
-    category: string;
+    search?: string;
+    category?: string;
     type: string;
   }) => ['products', filters] as const,
   product: (id: string) => ['product', id] as const,

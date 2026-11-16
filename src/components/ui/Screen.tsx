@@ -4,13 +4,14 @@ import {
   Platform,
   RefreshControl,
   ScrollView,
+  StatusBar,
   StyleSheet,
   View,
   type StyleProp,
   type ViewStyle,
 } from 'react-native';
 import {
-  SafeAreaView,
+  useSafeAreaInsets,
   type Edge,
 } from 'react-native-safe-area-context';
 
@@ -18,6 +19,7 @@ import { colors, layout } from '@/theme/tokens';
 
 type ScreenProps = PropsWithChildren<{
   style?: StyleProp<ViewStyle>;
+  safeStyle?: StyleProp<ViewStyle>;
   padded?: boolean;
   edges?: Edge[];
 }>;
@@ -25,13 +27,31 @@ type ScreenProps = PropsWithChildren<{
 export function Screen({
   children,
   style,
+  safeStyle,
   padded = false,
   edges = ['top', 'left', 'right'],
 }: ScreenProps) {
+  const insets = useSafeAreaInsets();
+  const hasTop = edges.includes('top');
+  const topInset = hasTop
+    ? Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0) + 6
+    : 0;
+
   return (
-    <SafeAreaView style={styles.safe} edges={edges}>
+    <View
+      style={[
+        styles.safe,
+        {
+          paddingTop: topInset,
+          paddingLeft: edges.includes('left') ? insets.left : 0,
+          paddingRight: edges.includes('right') ? insets.right : 0,
+          paddingBottom: edges.includes('bottom') ? insets.bottom : 0,
+        },
+        safeStyle,
+      ]}
+    >
       <View style={[styles.body, padded && styles.padded, style]}>{children}</View>
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -59,8 +79,25 @@ export function ScreenScroll({
   keyboardShouldPersistTaps = 'handled',
   bottomInset = 32,
 }: ScrollProps) {
+  const insets = useSafeAreaInsets();
+  const hasTop = edges.includes('top');
+  const topInset = hasTop
+    ? Math.max(insets.top, Platform.OS === 'android' ? (StatusBar.currentHeight || 24) : 0) + 6
+    : 0;
+
   return (
-    <SafeAreaView style={[styles.safe, safeStyle]} edges={edges}>
+    <View
+      style={[
+        styles.safe,
+        {
+          paddingTop: topInset,
+          paddingLeft: edges.includes('left') ? insets.left : 0,
+          paddingRight: edges.includes('right') ? insets.right : 0,
+          paddingBottom: edges.includes('bottom') ? insets.bottom : 0,
+        },
+        safeStyle,
+      ]}
+    >
       <ScrollView
         style={[styles.scroll, style]}
         contentContainerStyle={[
@@ -85,7 +122,7 @@ export function ScreenScroll({
       >
         {children}
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 }
 

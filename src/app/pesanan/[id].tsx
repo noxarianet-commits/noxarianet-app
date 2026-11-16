@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { router, useIsFocused, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, View } from 'react-native';
 
 import { cancelOrder, getOrder } from '@/api/mobile';
 import { queryKeys } from '@/api/queryKeys';
@@ -28,7 +28,8 @@ import {
   formatRupiah,
 } from '@/lib/format';
 import { RATE_LIMIT_POLL_DELAY } from '@/lib/polling';
-import { colors, isFinalOrderStatus, radius, spacing } from '@/theme/tokens';
+import { cleanProductName } from '@/lib/products';
+import { colors, fonts, isFinalOrderStatus, radius, spacing } from '@/theme/tokens';
 
 const STATUS_MESSAGES: Record<
   string,
@@ -94,20 +95,24 @@ export default function OrderDetailScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  useHardwareBackPress(() => {
+  const handleBack = () => {
     if (receiptVisible) {
       setReceiptVisible(false);
-      return true;
+      return;
     }
     if (cancelVisible) {
       setCancelVisible(false);
-      return true;
+      return;
     }
     if (router.canGoBack()) {
       router.back();
     } else {
       router.replace('/(tabs)/pesanan');
     }
+  };
+
+  useHardwareBackPress(() => {
+    handleBack();
     return true;
   });
 
@@ -183,16 +188,14 @@ export default function OrderDetailScreen() {
     }
   };
 
-  const copyOrderId = async () => {
-    await Clipboard.setStringAsync(orderId);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
-  };
-
-  const copySerial = async (value: string) => {
+  const copyTextWithAlert = async (label: string, value: string) => {
+    if (!value) return;
     await Clipboard.setStringAsync(value);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1800);
+    Alert.alert(
+      'Berhasil Disalin! 📋',
+      `${label} berhasil disalin ke clipboard:\n\n${value}`,
+      [{ text: 'OK', style: 'default' }],
+    );
   };
 
   if (!orderId) {
@@ -218,7 +221,7 @@ export default function OrderDetailScreen() {
         <AppHeader
           title="Detail pesanan"
           subtitle={orderId}
-          onBack={() => router.replace('/(tabs)/pesanan')}
+          onBack={handleBack}
         />
         <LoadingState label="Memuat pesanan…" />
       </ScreenScroll>
@@ -231,7 +234,7 @@ export default function OrderDetailScreen() {
         <AppHeader
           title="Detail pesanan"
           subtitle={orderId}
-          onBack={() => router.replace('/(tabs)/pesanan')}
+          onBack={handleBack}
         />
         <ErrorState
           error={orderQuery.error}
@@ -247,10 +250,7 @@ export default function OrderDetailScreen() {
       <AppHeader
         title="Detail pesanan"
         subtitle={orderId}
-        onBack={() => {
-          if (router.canGoBack()) router.back();
-          else router.replace('/(tabs)/pesanan');
-        }}
+        onBack={handleBack}
         right={
           <Pressable
             onPress={() => setReceiptVisible(true)}
@@ -261,7 +261,7 @@ export default function OrderDetailScreen() {
           >
             <MaterialCommunityIcons
               name="printer-outline"
-              size={22}
+              size={20}
               color={colors.coralDark}
             />
           </Pressable>
@@ -286,19 +286,39 @@ export default function OrderDetailScreen() {
         />
       ) : null}
 
-      <SurfaceCard style={styles.card}>
+      <SurfaceCard tone="glass" style={styles.card}>
         <View style={styles.cardHead}>
           <View style={styles.cardHeadLeft}>
-            <AppText variant="titleMedium">{order.product}</AppText>
-            <AppText variant="bodySmall" color={colors.muted}>
-              {order.variant}
+            <AppText
+              variant="titleMedium"
+              style={styles.productName}
+              numberOfLines={2}
+              adjustsFontSizeToFit
+              minimumFontScale={0.85}
+            >
+              {cleanProductName(order.product)}
+            </AppText>
+            <AppText variant="bodySmall" color={colors.muted} numberOfLines={1}>
+              {cleanProductName(order.variant)}
             </AppText>
           </View>
           <StatusPill status={order.status} />
         </View>
 
-        <ReceiptRow label="Nomor Pesanan" value={order.id} copyable onCopy={copyOrderId} />
-        {target ? <ReceiptRow label="Tujuan" value={String(target)} copyable /> : null}
+        <ReceiptRow
+          label="Nomor Pesanan"
+          value={order.id}
+          copyable
+          onCopy={() => void copyTextWithAlert('Nomor Pesanan', order.id)}
+        />
+        {target ? (
+          <ReceiptRow
+            label="Tujuan"
+            value={String(target)}
+            copyable
+            onCopy={() => void copyTextWithAlert('Nomor / ID Tujuan', String(target))}
+          />
+        ) : null}
         {isPostpaid && details.customer_name ? (
           <ReceiptRow label="Nama Pelanggan" value={String(details.customer_name)} />
         ) : null}
@@ -323,7 +343,7 @@ export default function OrderDetailScreen() {
       </SurfaceCard>
 
       {serial ? (
-        <SurfaceCard style={styles.card}>
+        <SurfaceCard tone="glass" style={styles.card}>
           <AppText variant="titleSmall" style={styles.sectionTitle}>
             SN / Serial Number / Bukti
           </AppText>
@@ -331,24 +351,24 @@ export default function OrderDetailScreen() {
             label="Serial Number"
             value={String(serial)}
             copyable
-            onCopy={() => void copySerial(String(serial))}
+            onCopy={() => void copyTextWithAlert('Serial Number / SN', String(serial))}
             highlight
           />
         </SurfaceCard>
       ) : null}
 
       {licenses.length > 0 ? (
-        <SurfaceCard style={styles.card}>
+        <SurfaceCard tone="glass" style={styles.card}>
           <AppText variant="titleSmall" style={styles.sectionTitle}>
             Kode Voucher / Lisensi
           </AppText>
           {licenses.map((lic, idx) => (
             <ReceiptRow
               key={idx}
-              label={`Kode ${idx + 1}`}
+              label={`Kode Voucher ${idx + 1}`}
               value={lic}
               copyable
-              onCopy={() => void copySerial(lic)}
+              onCopy={() => void copyTextWithAlert(`Kode Voucher ${idx + 1}`, lic)}
               highlight
             />
           ))}
@@ -436,17 +456,29 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 0,
   },
+  productName: {
+    fontFamily: fonts.bold,
+    fontSize: 16,
+    lineHeight: 22,
+    color: colors.ink,
+  },
   sectionTitle: {
+    fontFamily: fonts.bold,
+    fontSize: 15,
     marginBottom: spacing.sm,
+    color: colors.ink,
   },
   actions: {
-    gap: spacing.sm,
+    gap: spacing.sm + 2,
     marginTop: spacing.sm,
     marginBottom: spacing.xl,
   },
   headerBtn: {
-    padding: spacing.xs,
+    padding: 8,
     borderRadius: radius.pill,
+    backgroundColor: 'rgba(77, 27, 140, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(77, 27, 140, 0.16)',
   },
   pressed: {
     opacity: 0.7,
