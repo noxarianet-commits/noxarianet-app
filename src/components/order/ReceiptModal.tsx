@@ -49,7 +49,7 @@ type ReceiptModalProps = {
 };
 
 export function ReceiptModal({ visible, onClose, order }: ReceiptModalProps) {
-  const receiptPaperRef = useRef<View>(null);
+  const receiptPaperRef = useRef<React.ElementRef<typeof View>>(null);
   const [copied, setCopied] = useState(false);
   const [savingImage, setSavingImage] = useState(false);
 
@@ -272,7 +272,7 @@ export function ReceiptModal({ visible, onClose, order }: ReceiptModalProps) {
               <View
                 style={styles.watermarkLayer}
                 pointerEvents="none"
-                aria-hidden="true"
+                aria-hidden={true}
               >
                 {WATERMARK_ROWS.map((idx) => (
                   <View key={idx} style={styles.watermarkRow}>

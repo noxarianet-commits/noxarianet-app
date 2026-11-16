@@ -12,12 +12,15 @@ import {
 
 import { ApiError } from '@/api/client';
 import { setAuthToken, setUnauthorizedHandler } from '@/api/authToken';
-import { getMe, login as loginRequest } from '@/api/mobile';
+import { getMe, login as loginRequest, unregisterDevice } from '@/api/mobile';
 import { queryKeys } from '@/api/queryKeys';
 import type { UserProfile } from '@/api/types';
+import { resetPushRegistrationGate } from '@/lib/pushRegistrationGate';
 import {
   clearPendingRegistration,
+  clearPushToken,
   clearSession,
+  loadPushToken,
   loadSession,
   saveSession,
   saveUserCache,
@@ -168,6 +171,18 @@ export function AuthProvider({ children }: PropsWithChildren) {
 
   const signOut = useCallback(
     async (message?: string) => {
+      // Nonaktifkan push token selagi JWT masih valid. Kalau clearAll jalan
+      // lebih dulu, request DELETE tidak punya Authorization dan backend
+      // membalas 401, sehingga token tetap aktif menerima notifikasi.
+      const pushToken = await loadPushToken();
+      if (pushToken) {
+        // Jangan menahan logout terlalu lama kalau jaringan sedang buruk.
+        await unregisterDevice(pushToken, 3000).catch(() => undefined);
+        await clearPushToken();
+      }
+      // Login berikutnya (bahkan dalam <60 detik) harus mendaftarkan ulang
+      // perangkat yang baru saja dinonaktifkan.
+      resetPushRegistrationGate();
       await clearAll(message);
     },
     [clearAll],

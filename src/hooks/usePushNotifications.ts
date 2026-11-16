@@ -15,11 +15,12 @@ try {
   Notifications = require('expo-notifications');
 } catch {}
 
-import { registerDevice, unregisterDevice } from '@/api/mobile';
+import { registerDevice } from '@/api/mobile';
 import { useAuth } from '@/auth/AuthProvider';
 import { initNotifications, showNotification } from '@/lib/notifications';
+import { shouldRegisterPushToken } from '@/lib/pushRegistrationGate';
 import { getExpoPushToken } from '@/lib/pushToken';
-import { clearPushToken, loadPushToken } from '@/lib/storage';
+import { clearPushToken } from '@/lib/storage';
 
 type PushData = Record<string, unknown>;
 
@@ -113,6 +114,7 @@ export function usePushNotifications() {
       if (status === 'signedIn' && userId) {
         const result = await getExpoPushToken();
         if (cancelled || !result.ok) return;
+        if (!shouldRegisterPushToken(userId)) return;
 
         await registerDevice({
           push_token: result.token,
@@ -124,10 +126,8 @@ export function usePushNotifications() {
         return;
       }
 
-      // Logout — lepaskan token supaya perangkat ini berhenti menerima push.
-      const previousToken = await loadPushToken();
-      if (!previousToken) return;
-      await unregisterDevice(previousToken).catch(() => undefined);
+      // signOut menonaktifkan token SEBELUM sesi dihapus. Di sini cukup
+      // bersihkan sisa token lokal (mis. sesi kedaluwarsa).
       await clearPushToken();
     })();
 
@@ -144,6 +144,9 @@ export function usePushNotifications() {
     try {
       const subscription = Notifications.addPushTokenListener(() => {
         if (!userId) return;
+        // Cek gate SEBELUM getExpoPushToken: pada sebagian perangkat, memanggil
+        // getExpoPushToken justru memicu listener ini lagi.
+        if (!shouldRegisterPushToken(userId)) return;
         void (async () => {
           const result = await getExpoPushToken();
           if (!result.ok) return;

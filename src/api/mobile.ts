@@ -257,12 +257,13 @@ export function registerDevice(payload: RegisterDevicePayload) {
   });
 }
 
-export function unregisterDevice(pushToken: string) {
+export function unregisterDevice(pushToken: string, timeoutMs = 25000) {
   return apiRequest<MessageResponse>(
     `/mobile/devices?push_token=${encodeURIComponent(pushToken)}`,
     {
       method: 'DELETE',
       notifyAuthError: false,
+      timeoutMs,
     },
   );
 }
