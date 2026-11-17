@@ -22,6 +22,10 @@ export type SiteContent = {
 export type MobileConfig = {
   min_version: string;
   latest_version: string;
+  /** URL file APK langsung; kosong berarti admin belum mengisinya. */
+  download_url?: string | null;
+  /** Catatan rilis opsional untuk layar update dan halaman download. */
+  release_notes?: string | null;
   maintenance: boolean;
   features: {
     bills?: boolean;

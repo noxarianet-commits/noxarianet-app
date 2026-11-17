@@ -65,9 +65,15 @@ EXPO_PUBLIC_UPDATE_URL=https://example.com/download
 EXPO_PUBLIC_SUPPORT_URL=https://wa.me/628xxxxxxxxxx
 ```
 
-`EXPO_PUBLIC_UPDATE_URL` dipakai tombol di layar force-update.
+`EXPO_PUBLIC_UPDATE_URL` hanya fallback. Sumber utama tombol “Update sekarang”
+adalah `download_url` dari `/api/mobile/config` yang diatur admin di dashboard.
 `EXPO_PUBLIC_SUPPORT_URL` hanya fallback jika backend belum mengisi
 `whatsapp_cs`.
+
+Versi aplikasi dibandingkan dengan `min_version` dan `latest_version` dari
+config yang sama. Di bawah `min_version` aplikasi terkunci di layar update;
+di bawah `latest_version` muncul banner update di Beranda. Pengecekan ini
+dilewati di `__DEV__`, jadi uji memakai build preview/release.
 
 ## Build APK internal (EAS)
 

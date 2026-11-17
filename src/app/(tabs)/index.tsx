@@ -1,11 +1,12 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import * as Application from 'expo-application';
 import * as Clipboard from 'expo-clipboard';
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Dialog, Portal } from 'react-native-paper';
+import { Dialog, Portal } from 'react-native-paper';
 
 import type { HomeCategory } from '@/api/types';
 import { useAuth } from '@/auth/AuthProvider';
@@ -18,6 +19,7 @@ import { ScreenScroll } from '@/components/ui/Screen';
 import { SectionHeader } from '@/components/ui/SectionHeader';
 import { HomeSkeleton } from '@/components/ui/Skeleton';
 import { ErrorState } from '@/components/ui/States';
+import { UpdateBanner } from '@/components/ui/UpdateBanner';
 import { BalanceCard } from '@/components/wallet/BalanceCard';
 import { useBalance } from '@/hooks/useBalance';
 import { useAppConfig } from '@/hooks/useAppConfig';
@@ -26,7 +28,13 @@ import { useHome } from '@/hooks/useHome';
 import { useMe } from '@/hooks/useMe';
 import { firstName } from '@/lib/format';
 import { cleanProductName } from '@/lib/products';
-import { dismissInfoModal, shouldShowInfoModal } from '@/lib/storage';
+import {
+  dismissInfoModal,
+  dismissUpdateVersion,
+  loadDismissedUpdateVersion,
+  shouldShowInfoModal,
+} from '@/lib/storage';
+import { isVersionBelow } from '@/lib/version';
 import { colors, fonts, layout, radius, spacing } from '@/theme/tokens';
 
 export default function HomeScreen() {
@@ -40,6 +48,8 @@ export default function HomeScreen() {
 
   const [infoVisible, setInfoVisible] = useState(false);
   const [modalCopied, setModalCopied] = useState(false);
+  const [dismissedUpdateVersion, setDismissedUpdateVersion] = useState<string | null>(null);
+  const [updateDismissalLoaded, setUpdateDismissalLoaded] = useState(false);
 
   const profile = meQuery.data ?? user;
   const home = homeQuery.data;
@@ -58,6 +68,17 @@ export default function HomeScreen() {
   );
   const testimonials = home?.testimonials ?? [];
   const shopClosed = settings?.shop_status?.isOpen === false;
+  const currentVersion = Application.nativeApplicationVersion;
+  const latestVersion = configQuery.data?.latest_version ?? '';
+  const updateDownloadUrl =
+    configQuery.data?.download_url || process.env.EXPO_PUBLIC_UPDATE_URL || '';
+  const showUpdateBanner =
+    updateDismissalLoaded &&
+    !__DEV__ &&
+    Boolean(latestVersion) &&
+    Boolean(updateDownloadUrl) &&
+    isVersionBelow(currentVersion, latestVersion) &&
+    dismissedUpdateVersion !== latestVersion;
 
   useEffect(() => {
     if (!settings?.info_modal_active || !settings.info_modal_text) return;
@@ -72,21 +93,43 @@ export default function HomeScreen() {
     };
   }, [settings?.info_modal_active, settings?.info_modal_text]);
 
+  useEffect(() => {
+    let active = true;
+
+    void loadDismissedUpdateVersion().then((value) => {
+      if (!active) return;
+      setDismissedUpdateVersion(value);
+      setUpdateDismissalLoaded(true);
+    });
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const dismissInfo = () => {
     setInfoVisible(false);
     void dismissInfoModal();
+  };
+
+  const dismissUpdateBanner = () => {
+    if (!latestVersion) return;
+    setDismissedUpdateVersion(latestVersion);
+    void dismissUpdateVersion(latestVersion);
   };
 
   const refresh = () => {
     void homeQuery.refetch();
     void balanceQuery.refetch();
     void meQuery.refetch();
+    void configQuery.refetch();
   };
 
   const refreshing =
     homeQuery.isRefetching ||
     balanceQuery.isRefetching ||
-    meQuery.isRefetching;
+    meQuery.isRefetching ||
+    configQuery.isRefetching;
 
   if (homeQuery.isPending) {
     return (
@@ -195,6 +238,14 @@ export default function HomeScreen() {
 
         {/* Clean Light Body Content Area */}
         <View style={styles.bodyContent}>
+          {showUpdateBanner ? (
+            <UpdateBanner
+              latestVersion={latestVersion}
+              downloadUrl={updateDownloadUrl}
+              onDismiss={dismissUpdateBanner}
+            />
+          ) : null}
+
           {categories.length ? (
             <View style={styles.section}>
               <SectionHeader

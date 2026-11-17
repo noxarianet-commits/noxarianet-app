@@ -176,6 +176,8 @@ function BootstrapGate() {
   }
 
   const currentVersion = Application.nativeApplicationVersion;
+  const updateDownloadUrl =
+    config?.download_url || process.env.EXPO_PUBLIC_UPDATE_URL || null;
 
   if (
     !__DEV__ &&
@@ -185,7 +187,10 @@ function BootstrapGate() {
     return (
       <UpdateScreen
         currentVersion={currentVersion}
+        latestVersion={config.latest_version}
         minimumVersion={config.min_version}
+        downloadUrl={updateDownloadUrl}
+        releaseNotes={config.release_notes}
         retrying={configQuery.isFetching}
         onRetry={() => void configQuery.refetch()}
       />

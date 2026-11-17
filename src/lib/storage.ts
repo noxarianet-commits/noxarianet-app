@@ -16,6 +16,7 @@ const HOME_CACHE_KEY = 'noxarianet.cache.home';
 const CONFIG_CACHE_KEY = 'noxarianet.cache.config';
 const PENDING_REGISTER_KEY = 'noxarianet.pendingRegistration';
 const INFO_MODAL_KEY = 'noxarianet.infoModal.dismissedAt';
+const UPDATE_BANNER_KEY = 'noxarianet.updateBanner.dismissedVersion';
 const PAYMENT_PREFIX = 'noxarianet.payment.';
 const TOPUP_PREFIX = 'noxarianet.topup.';
 const PAYMENT_INDEX_KEY = 'noxarianet.payment.keys';
@@ -285,6 +286,28 @@ export async function shouldShowInfoModal() {
 export async function dismissInfoModal() {
   try {
     await AsyncStorage.setItem(INFO_MODAL_KEY, String(Date.now()));
+  } catch {
+    // ignore
+  }
+}
+
+// ── Update banner ─────────────────────────────────────────────────────────
+// Dismissal disimpan per versi terbaru: saat admin menaikkan latest_version,
+// banner muncul lagi otomatis.
+
+export async function loadDismissedUpdateVersion(): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(UPDATE_BANNER_KEY);
+  } catch {
+    return null;
+  }
+}
+
+export async function dismissUpdateVersion(version: string) {
+  const value = version.trim();
+  if (!value) return;
+  try {
+    await AsyncStorage.setItem(UPDATE_BANNER_KEY, value);
   } catch {
     // ignore
   }

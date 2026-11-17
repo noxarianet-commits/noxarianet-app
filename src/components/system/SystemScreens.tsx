@@ -1,5 +1,5 @@
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
-import { Linking, StyleSheet, View } from 'react-native';
+import { Alert, Linking, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ActivityIndicator } from 'react-native-paper';
 
@@ -57,16 +57,32 @@ export function MaintenanceScreen({
 
 export function UpdateScreen({
   currentVersion,
+  latestVersion,
   minimumVersion,
+  downloadUrl,
+  releaseNotes,
   onRetry,
   retrying,
 }: {
   currentVersion?: string | null;
+  latestVersion?: string | null;
   minimumVersion?: string | null;
+  downloadUrl?: string | null;
+  releaseNotes?: string | null;
   onRetry: () => void;
   retrying?: boolean;
 }) {
-  const updateUrl = process.env.EXPO_PUBLIC_UPDATE_URL;
+  const handleOpenDownload = async () => {
+    if (!downloadUrl) return;
+    try {
+      await Linking.openURL(downloadUrl);
+    } catch {
+      Alert.alert(
+        'Link unduhan tidak bisa dibuka',
+        'Silakan hubungi admin melalui grup WhatsApp Noxarianet untuk mendapatkan APK terbaru.',
+      );
+    }
+  };
 
   return (
     <SafeAreaView style={styles.screen} edges={['top', 'bottom', 'left', 'right']}>
@@ -79,14 +95,15 @@ export function UpdateScreen({
           />
         </View>
         <AppText variant="labelSmall" color={colors.coralDark} style={styles.eyebrow}>
-          PEMBARUAN TERSEDIA
+          VERSI KADALUARSA
         </AppText>
         <AppText variant="headlineLarge" align="center">
-          Versi aplikasi terlalu lama
+          Versi aplikasi sudah kadaluarsa
         </AppText>
         <AppText variant="bodyMedium" color={colors.muted} align="center" style={styles.copy}>
-          Versi {currentVersion || 'saat ini'} tidak lagi didukung. Versi minimum
-          yang diperlukan adalah {minimumVersion || 'versi terbaru'}.
+          Versi {currentVersion || 'saat ini'} sudah tidak didukung. Update
+          sekarang ke versi {latestVersion || minimumVersion || 'terbaru'} untuk
+          kembali menggunakan aplikasi.
         </AppText>
 
         <View style={styles.versionCard}>
@@ -101,6 +118,15 @@ export function UpdateScreen({
           <View style={styles.versionDivider} />
           <View style={styles.versionRow}>
             <AppText variant="bodySmall" color={colors.muted}>
+              Versi terbaru
+            </AppText>
+            <AppText variant="bodySmall" weight="monoMedium">
+              {latestVersion || '—'}
+            </AppText>
+          </View>
+          <View style={styles.versionDivider} />
+          <View style={styles.versionRow}>
+            <AppText variant="bodySmall" color={colors.muted}>
               Minimum
             </AppText>
             <AppText variant="bodySmall" weight="monoMedium">
@@ -108,25 +134,42 @@ export function UpdateScreen({
             </AppText>
           </View>
         </View>
+
+        {releaseNotes ? (
+          <View style={styles.releaseNotes}>
+            <AppText variant="labelSmall" color={colors.muted} style={styles.releaseNotesLabel}>
+              APA YANG BARU
+            </AppText>
+            <AppText
+              variant="bodySmall"
+              color={colors.inkSoft}
+              style={styles.releaseNotesText}
+              numberOfLines={4}
+            >
+              {releaseNotes}
+            </AppText>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.actions}>
-        {updateUrl ? (
-          <PrimaryButton onPress={() => Linking.openURL(updateUrl)}>
-            Buka halaman unduh
+        {downloadUrl ? (
+          <PrimaryButton onPress={() => void handleOpenDownload()}>
+            Update sekarang
           </PrimaryButton>
         ) : (
           <PrimaryButton onPress={onRetry} disabled={retrying}>
             {retrying ? 'Memeriksa…' : 'Coba lagi'}
           </PrimaryButton>
         )}
-        {updateUrl ? (
+        {downloadUrl ? (
           <SecondaryButton onPress={onRetry} disabled={retrying}>
-            {retrying ? 'Memeriksa…' : 'Sudah diperbarui'}
+            {retrying ? 'Memeriksa…' : 'Coba lagi'}
           </SecondaryButton>
         ) : (
           <AppText variant="bodySmall" color={colors.muted} align="center">
-            Minta APK terbaru ke admin melalui grup WhatsApp Noxarianet.
+            Link unduhan belum tersedia. Minta APK terbaru ke admin melalui grup
+            WhatsApp Noxarianet.
           </AppText>
         )}
       </View>
@@ -193,6 +236,20 @@ const styles = StyleSheet.create({
   versionDivider: {
     height: StyleSheet.hairlineWidth,
     backgroundColor: colors.line,
+  },
+  releaseNotes: {
+    marginTop: spacing.md,
+    alignSelf: 'stretch',
+    maxWidth: 320,
+    width: '100%',
+  },
+  releaseNotesLabel: {
+    letterSpacing: 1.2,
+    marginBottom: 4,
+  },
+  releaseNotesText: {
+    fontFamily: fonts.regular,
+    lineHeight: 19,
   },
   actions: {
     gap: spacing.sm,
