@@ -133,6 +133,8 @@ export const orderStatusFilters = [
   { key: 'PROCESSING', label: 'Diproses' },
   { key: 'COMPLETED', label: 'Selesai' },
   { key: 'FAILED', label: 'Gagal' },
+  { key: 'REFUND_PENDING', label: 'Refund' },
+  { key: 'REFUNDED', label: 'Dikembalikan' },
 ] as const;
 
 export const isFinalOrderStatus = (status?: string | null) =>

@@ -257,6 +257,25 @@ export default function PaymentScreen() {
     );
   }
 
+  if (status === 'REFUND_PENDING') {
+    return (
+      <ResultView
+        tone="warning"
+        icon="cash-refund"
+        title="Refund sedang diproses"
+        message={
+          order?.error_message ||
+          'Pesanan gagal diproses. Saldo akan dikembalikan ke akunmu dan proses ini dicoba ulang otomatis.'
+        }
+        orderId={orderId}
+        onPrimary={() =>
+          router.replace({ pathname: '/pesanan/[id]', params: { id: orderId } })
+        }
+        onSecondary={() => router.replace('/(tabs)/pesanan')}
+      />
+    );
+  }
+
   if (status === 'CANCELLED' || status === 'FAILED') {
     return (
       <ResultView
@@ -532,8 +551,8 @@ function ResultView({
   onPrimary,
   onSecondary,
 }: {
-  tone: 'success' | 'danger';
-  icon: 'check-decagram' | 'close-octagon-outline';
+  tone: 'success' | 'danger' | 'warning';
+  icon: 'check-decagram' | 'close-octagon-outline' | 'cash-refund';
   title: string;
   message: string;
   orderId: string;
@@ -543,7 +562,9 @@ function ResultView({
   const palette =
     tone === 'success'
       ? { bg: colors.tealSoft, fg: colors.teal }
-      : { bg: colors.dangerSoft, fg: colors.danger };
+      : tone === 'warning'
+        ? { bg: colors.goldSoft, fg: colors.goldInk }
+        : { bg: colors.dangerSoft, fg: colors.danger };
 
   return (
     <ScreenScroll>
